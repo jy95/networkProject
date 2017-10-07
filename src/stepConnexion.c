@@ -16,7 +16,7 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     options.ai_family = AF_INET6; // IPV6
     options.ai_socktype = SOCK_DGRAM; // SOCK_DGRAM ou SOCK_STREAM
     options.ai_flags = 0;
-    //options.ai_protocol = 0;          /* N'importe quel protocol (pas nécessaire) */
+    options.ai_protocol = 0;          /* N'importe quel protocol (pas nécessaire) */
 
     // on essaye de trouver une adresse
     // service à NULL parce qu'on a pas un numéro de port précis
@@ -54,8 +54,8 @@ int create_socket(struct sockaddr_in6 *source_addr,
 
     // Etape 1 : ouverture du socket
     int socketFileDescriptor;
-    // SOCK_DGRAM ou SOCK_STREAM pour le 3e param
-    if ( ( socketFileDescriptor = socket(AF_INET6,SOCK_DGRAM,0) ) == -1) {
+
+    if ( ( socketFileDescriptor = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP) ) == -1) {
         // pas possible d'ouvrir le socket
         fprintf(stderr,"Cannot create socket\n");
         return -1;
@@ -64,7 +64,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
     // Etape 2 : se connecter
 
     // On veut bind le socket avec une source
-    if (source_addr != NULL){
+    if (source_addr){
 
         if (src_port > 0) {
             source_addr->sin6_port = src_port;
@@ -79,7 +79,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
     }
 
     // On veut connecter le socket avec une destination
-    if (dest_addr != NULL){
+    if (dest_addr){
 
         if (dst_port > 0){
             dest_addr->sin6_port = dst_port;
