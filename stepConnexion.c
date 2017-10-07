@@ -5,25 +5,27 @@
 #include <stdio.h>
 #include <string.h>
 
-const char * real_address(const char *address, struct sockaddr_in6 *rval){
+const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     // les options pour getaddrinfo
     struct addrinfo options;
     // la struct addrinfo qui va être modifier par getaddrinfo
-    struct addrinfo * result;
+    struct addrinfo *result;
     int errorCode;
 
     // settage des paramètres
     options.ai_family = AF_INET6; // IPV6
     options.ai_socktype = SOCK_STREAM;
+    options.ai_flags = 0;
+    options.ai_protocol = 0;          /* N'importe quel protocol */
 
     // on essaye de trouver une adresse
     // service à NULL parce qu'on a pas un numéro de port précis
-    const char * errorMessage = "CANNOT FIND THE IPV6 ADRESSE";
+    const char *errorMessage = "CANNOT FIND THE IPV6 ADRESSE";
 
-    // TODO : getaddrinfo renvoit -1 sur INGI ; Reste à trouver pourquoi ^^
-    if ( (errorCode = getaddrinfo(address,NULL,&options,&result)) != 0) {
+    errorCode = getaddrinfo(address, NULL, &options, &result);
+    if(errorCode != 0) {
         // On a un problème
-        fprintf(stderr,"ERROR CODE : %d \n", errorCode);
+        fprintf(stderr, "ERROR CODE : %d \n", errorCode);
         return errorMessage;
     } else {
         // en théorie , la structure addrinfo est récursive
@@ -37,6 +39,8 @@ const char * real_address(const char *address, struct sockaddr_in6 *rval){
 
         // et que c'est de IPV6
         rval->sin6_family = AF_INET6;
+
+        freeaddrinfo(result);
 
         return NULL;
     }
