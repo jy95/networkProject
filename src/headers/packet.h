@@ -21,11 +21,11 @@ typedef struct packet {
         } bitFields;
         uint8_t seqNum; // numéro de séquence
         uint16_t length; // la longueur du packet , warning endian
-        unit32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité unit32_t
-        unit32_t CRC1;
+        uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
+        uint32_t CRC1;
     } header;
-    unsigned char * payload; // payload à malloc plus tard
-    unit32_t CRC2; // 2e CRC si payload
+    char * payload; // payload à malloc plus tard
+    uint32_t CRC2; // 2e CRC si payload
 } packet;
 
 // CONSTANTS
@@ -135,8 +135,8 @@ packet_status_code pkt_set_crc1     (packet*, const uint32_t crc1);
  * @length: Le nombre d'octets composant le payload
  * @POST: pkt_get_length(pkt) == length */
 packet_status_code pkt_set_payload(packet*,
-                                const char *data,
-                                const uint16_t length);
+                                   const char *data,
+                                   const uint16_t length);
 /* Setter pour CRC2. Les valeurs fournies sont dans l'endianness
  * native de la machine!
  */
