@@ -1,9 +1,17 @@
 #include "headers/create_socket.h"
 #include "headers/real_address.h"
+#include "headers/read_write_loop.h"
+#include "headers/wait_for_client.h"
 
 #include <netdb.h> // Nécessaire
 #include <stdio.h>
 #include <string.h>
+#include <sys/select.h>
+#include <sys/time.h> // timeout pour select
+#include <sys/types.h> // read, write
+#include <unistd.h>
+
+#define BUFFER_LENGTH   1024
 
 const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     // les options pour getaddrinfo
@@ -95,4 +103,115 @@ int create_socket(struct sockaddr_in6 *source_addr,
     }
 
     return socketFileDescriptor;
+}
+
+void read_write_loop(int sfd){
+
+    // les variables pour opérer avec select
+    fd_set readfds ;
+    struct timeval tv;
+    int result;
+    int maxFd = sfd + 1; // the max fd + 1 for select;
+
+    // settage du timeout (durée arbitraire : 3 secondes)
+    tv.tv_sec = 3;
+
+    // On vide l'ensemble
+    FD_ZERO(&readfds);
+
+    // espions pour lecture
+
+    // On va espionner STDIN (fd : 0)
+    FD_SET(0, &readfds);
+
+    // et notre socket (sfd)
+    FD_SET(sfd, &readfds);
+
+    // On n'a pas besoin de setter ces champs là :
+    // writefds , exceptfds
+    result = select(maxFd, &readfds, NULL , NULL , &tv);
+
+    if (result == -1){
+        fprintf(stderr,"Error with select\n");
+    } else if (result == 0){
+        // timer expiré : ne rien faire
+    } else {
+
+        char    buf[BUFFER_LENGTH];
+
+        // Des données sont disponibles sur stdin
+        if (FD_ISSET(0, &readfds)) {
+
+            // on s'assure que ce buffer est vide
+            memset(buf,0,BUFFER_LENGTH);
+
+            // lecture réussie
+            if ( read(0,buf,BUFFER_LENGTH) >= 0 ){
+                // On s'assure qu'il y ait bien un \0 à la fin
+                int bufferLength = strlen(buf) -1;
+                if (buf[bufferLength] == '\n')
+                    buf[bufferLength] = '\0';
+
+                // on envoit tout cela à la socket
+                if ( write(sfd,buf,bufferLength + 1) < 0){
+                    fprintf(stderr,"Cannot write message to socket\n");
+                }
+            } else {
+                fprintf(stderr,"Cannot read STDIN\n");
+            }
+
+        }
+
+        // Des données sont disponibles sur la socket
+        if (FD_ISSET(sfd, &readfds)) {
+
+            // on s'assure que ce buffer est vide
+            memset(buf,0,BUFFER_LENGTH);
+
+            // lecture réussie
+            if ( read(sfd,buf,BUFFER_LENGTH) >= 0 ){
+
+                // On s'assure qu'il y ait bien un \0 à la fin
+                int bufferLength = strlen(buf) -1;
+                if (buf[bufferLength] == '\n')
+                    buf[bufferLength] = '\0';
+
+                // On envoit tout cela sur STDOUT (FD : 1)
+                if ( write(1,buf,BUFFER_LENGTH) < 0 ){
+                    fprintf(stderr,"Cannot write message to socket\n");
+                }
+
+            } else {
+                fprintf(stderr,"Cannot read socket\n");
+            }
+        }
+    }
+}
+
+int wait_for_client(int sfd) {
+
+    char    buf[BUFFER_LENGTH];
+
+    // On s'assure qu'il sera vide
+    memset(buf,0,BUFFER_LENGTH);
+
+    struct sockaddr_in6 senderAddress;
+    socklen_t fromlen = sizeof(senderAddress);
+
+    // flags à 0 : on veut du bloquant
+    if ( recvfrom(sfd,buf,BUFFER_LENGTH,0, (struct sockaddr *) &senderAddress, &fromlen ) == -1 ){
+        fprintf(stderr,"Cannot recvfrom with socket\n");
+        return -1;
+    } else {
+
+        // On veut se connecter à celui qui nous a contacté
+        if ( connect(sfd, (struct sockaddr *) &senderAddress, sizeof(senderAddress) ) == -1 ){
+            fprintf(stderr,"Cannot connect with destination address\n");
+            return -1;
+        }
+
+        return 0;
+
+    }
+
 }
