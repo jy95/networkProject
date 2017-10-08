@@ -9,21 +9,22 @@
 #define NETWORKPROJECT_PACKET_H
 
 // STRUCT
+struct header {
+    // explicit packing
+    struct __attribute__((__packed__)) bitFields {
+        unsigned int type:2;
+        unsigned int trFlag:1; //tr flag
+        unsigned int window:5; //WINDOW
+    } bitFields;
+    uint8_t seqNum; // numéro de séquence
+    uint16_t length; // la longueur du packet , warning endian
+    uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
+    uint32_t CRC1;
+} header;
 
 // typedef pour définir un type
 typedef struct packet {
-    struct header {
-        // explicit packing
-        struct __attribute__((__packed__)) bitFields {
-            unsigned int type:2;
-            unsigned int trFlag:1; //tr flag
-            unsigned int window:5; //WINDOW
-        } bitFields;
-        uint8_t seqNum; // numéro de séquence
-        uint16_t length; // la longueur du packet , warning endian
-        uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
-        uint32_t CRC1;
-    } header;
+    struct header header;
     char * payload; // payload à malloc plus tard
     uint32_t CRC2; // 2e CRC si payload
 } packet;

@@ -5,7 +5,74 @@
 
 
 packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt) {
-    // TODO
+
+    packet_status_code packetStatusCode;
+
+    if (len < 12) return E_NOHEADER; //Pas assez de Bytes pour former un header
+
+    struct header header;
+
+    memcpy(&header, data + 0, 12); //Copie des 12 premiers bytes, qui formeront la structure header
+
+    /*- Verification des donnees et ajout de celles-ci dans le paquet -*/
+
+    packetStatusCode = pkt_set_type(pkt, (const ptypes_t) header.bitFields.type);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_tr(pkt, (const uint8_t) header.bitFields.trFlag);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_window(pkt, (const uint8_t) header.bitFields.window);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_seqnum(pkt, header.seqNum);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_length(pkt, header.length);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_timestamp(pkt, header.timestamp);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    packetStatusCode = pkt_set_crc1(pkt, header.CRC1);
+
+    if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+    /*- Le cas du payload -*/
+
+    uint16_t length = pkt_get_length(pkt);
+
+    if (length > 0 && pkt_get_tr(pkt) == 0) {
+
+        if (len < 12 + length)
+            return E_UNCONSISTENT; //La longueur annoncee par length n'est pas pas disponible dans data
+
+        const char *payload;
+
+        memcpy(&payload, data + 12, length); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
+
+        packetStatusCode = pkt_set_payload(pkt, payload, length);
+
+        if (packetStatusCode != PKT_OK) return packetStatusCode;
+
+        if (len < 12 + length + 4) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
+
+        uint32_t CRC2;
+
+        memcpy(&CRC2, data + 12 + length, 4); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
+
+        packetStatusCode = pkt_set_crc2(pkt, CRC2);
+
+        if (packetStatusCode != PKT_OK) return packetStatusCode;
+    }
+
+    return PKT_OK;
 }
 
 packet_status_code pkt_encode(const packet *p, char *buf, size_t *len) {
@@ -29,7 +96,7 @@ uint8_t pkt_get_seqnum(const packet *p) {
 }
 
 uint16_t pkt_get_length(const packet *p) {
-    return (p->header).length;
+    return htons((p->header).length);
 }
 
 uint32_t pkt_get_timestamp(const packet *p) {
@@ -37,7 +104,7 @@ uint32_t pkt_get_timestamp(const packet *p) {
 }
 
 uint32_t pkt_get_crc1(const packet *p) {
-    return (p->header).CRC1;
+    return htonl((p->header).CRC1);
 }
 
 const char *pkt_get_payload(const packet *p) {
@@ -45,7 +112,7 @@ const char *pkt_get_payload(const packet *p) {
 }
 
 uint32_t pkt_get_crc2(const packet *p) {
-    return p->CRC2;
+    return htonl(p->CRC2);
 }
 
 
