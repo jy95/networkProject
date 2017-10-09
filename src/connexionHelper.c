@@ -44,12 +44,20 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
         // http://beej.us/guide/bgnet/output/html/multipage/syscalls.html#getaddrinfo
         // 5.1. getaddrinfo()—Prepare to launch!
 
-        // manière simple de copier l'info
-        rval = (struct sockaddr_in6 *) result->ai_addr;
+        // manière simple de copier l'info -- ne semble pas marcher à cause du free
+        //rval = (struct sockaddr_in6 *) result->ai_addr;
 
-        if (rval)
-            // on libère la ressource temporaire
-            freeaddrinfo(result);
+        // un memccpy pour récupérer les infos dans la structure
+        memcpy (rval, result->ai_addr, result->ai_addrlen);
+
+        // pour s'assurer que le numéro de port est bien dans l'endianisme de la machine
+        rval->sin6_port = htons(rval->sin6_port);
+
+        // et que c'est de IPV6
+        rval->sin6_family = AF_INET6;
+
+        // on libère la ressource temporaire
+        freeaddrinfo(result);
 
         return NULL;
     }
@@ -60,53 +68,48 @@ int create_socket(struct sockaddr_in6 *source_addr,
                   struct sockaddr_in6 *dest_addr,
                   int dst_port) {
 
+    // Doc : http://beej.us/guide/bgnet/output/html/multipage/syscalls.html#socket
 
     // Etape 1 : ouverture du socket
     int socketFileDescriptor;
 
-    // On sait que c'est de l'IPV6 et qu'on est en UPD datagram
-    if ( ( socketFileDescriptor = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP) ) == -1) {
+    // on crée le socket
+    if ( ( socketFileDescriptor = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP) ) == -1) {
+
         // pas possible d'ouvrir le socket
         fprintf(stderr,"Cannot create socket\n");
         return -1;
     }
 
-    // Etape 2 : se connecter
-    // manière simple pour gérer la size
-    // http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
-    socklen_t size = sizeof(struct sockaddr_in6);
-
     // On veut bind le socket avec une source
     if (source_addr){
 
+        // un port custom a été demandé
         if (src_port > 0) {
             source_addr->sin6_port = src_port;
-        } else {
-            source_addr->sin6_port = 0; // par défaut, n'importe quel port suffira
         }
 
-        if ( bind(socketFileDescriptor, (struct sockaddr *) source_addr, size) == -1 ){
+        if ( bind(socketFileDescriptor, (struct sockaddr *) source_addr, sizeof(struct sockaddr_in6) ) == -1 ){
             int errnum = errno;
             fprintf(stderr, "Cannot bind with source address : %s\n", strerror( errnum ));
             return -1;
         }
+        
     }
 
     // On veut connecter le socket avec une destination
-    if (dest_addr){
+    else if (dest_addr){
 
+        // un port custom a été demandé
         if (dst_port > 0){
             dest_addr->sin6_port = dst_port;
-        } else {
-            dest_addr->sin6_port = 0; // par défaut, n'importe quel port suffira
         }
 
-        if ( connect(socketFileDescriptor, (struct sockaddr *) dest_addr, size) == -1 ){
+        if ( connect(socketFileDescriptor, (struct sockaddr *) dest_addr, sizeof(struct sockaddr_in6) ) == -1 ){
             int errnum = errno;
             fprintf(stderr, "Cannot connect with destination address : %s\n", strerror( errnum ));
             return -1;
         }
-
     }
 
     return socketFileDescriptor;
