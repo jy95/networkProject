@@ -86,7 +86,8 @@ int create_socket(struct sockaddr_in6 *source_addr,
         }
 
         if ( bind(socketFileDescriptor, (struct sockaddr *) source_addr, size) == -1 ){
-            fprintf(stderr,"Cannot bind with source address\n");
+            int errnum = errno;
+            fprintf(stderr, "Cannot bind with source address : %s\n", strerror( errnum ));
             return -1;
         }
     }
@@ -101,7 +102,8 @@ int create_socket(struct sockaddr_in6 *source_addr,
         }
 
         if ( connect(socketFileDescriptor, (struct sockaddr *) dest_addr, size) == -1 ){
-            fprintf(stderr,"Cannot connect with destination address\n");
+            int errnum = errno;
+            fprintf(stderr, "Cannot connect with destination address : %s\n", strerror( errnum ));
             return -1;
         }
 
