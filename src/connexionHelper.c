@@ -63,6 +63,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
     // Etape 1 : ouverture du socket
     int socketFileDescriptor;
 
+    // On sait que c'est de l'IPV6 et qu'on est en UPD datagram
     if ( ( socketFileDescriptor = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP) ) == -1) {
         // pas possible d'ouvrir le socket
         fprintf(stderr,"Cannot create socket\n");
@@ -70,6 +71,9 @@ int create_socket(struct sockaddr_in6 *source_addr,
     }
 
     // Etape 2 : se connecter
+    // manière simple pour gérer la size
+    // http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
+    socklen_t size = sizeof(struct sockaddr_in6);
 
     // On veut bind le socket avec une source
     if (source_addr){
@@ -80,7 +84,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
             source_addr->sin6_port = 0; // par défaut, n'importe quel port suffira
         }
 
-        if ( bind(socketFileDescriptor, (struct sockaddr *) source_addr, sizeof(*source_addr) ) == -1 ){
+        if ( bind(socketFileDescriptor, (struct sockaddr *) source_addr, size) == -1 ){
             fprintf(stderr,"Cannot bind with source address\n");
             return -1;
         }
@@ -94,8 +98,8 @@ int create_socket(struct sockaddr_in6 *source_addr,
         } else {
             dest_addr->sin6_port = 0; // par défaut, n'importe quel port suffira
         }
-        // Bloque ici sur INGI
-        if ( connect(socketFileDescriptor, (struct sockaddr *) dest_addr, sizeof(*dest_addr) ) == -1 ){
+
+        if ( connect(socketFileDescriptor, (struct sockaddr *) dest_addr, size) == -1 ){
             fprintf(stderr,"Cannot connect with destination address\n");
             return -1;
         }
