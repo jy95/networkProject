@@ -8,26 +8,8 @@
 #ifndef NETWORKPROJECT_PACKET_H
 #define NETWORKPROJECT_PACKET_H
 
-// STRUCT
-struct header {
-    // explicit packing
-    struct __attribute__((__packed__)) bitFields {
-        unsigned int type:2;
-        unsigned int trFlag:1; //tr flag
-        unsigned int window:5; //WINDOW
-    } bitFields;
-    uint8_t seqNum; // numéro de séquence
-    uint16_t length; // la longueur du packet , warning endian
-    uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
-    uint32_t CRC1;
-} header;
-
 // typedef pour définir un type
-typedef struct packet {
-    struct header header;
-    char * payload; // payload à malloc plus tard
-    uint32_t CRC2; // 2e CRC si payload
-} packet;
+typedef struct pkt pkt_t;
 
 // CONSTANTS
 
@@ -52,7 +34,7 @@ typedef enum {
     E_NOMEM,        /* Pas assez de memoire */
     E_NOHEADER,     /* Le paquet n'a pas de header (trop court) */
     E_UNCONSISTENT, /* Le paquet est incoherent */
-} packet_status_code;
+} pkt_status_code;
 
 /* Types de paquets */
 typedef enum {
@@ -83,7 +65,7 @@ typedef enum {
  * @return: Un code indiquant si l'operation a reussi ou representant
  *         l'erreur rencontree.
  */
-packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt);
+pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt);
 
 /*
  * Encode une struct pkt dans un buffer, prêt a être envoye sur le reseau
@@ -97,50 +79,50 @@ packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt);
  * @return: Un code indiquant si l'operation a reussi ou E_NOMEM si
  *         le buffer est trop petit.
  */
-packet_status_code pkt_encode(const packet*, char *buf, size_t *len);
+pkt_status_code pkt_encode(const pkt_t*, char *buf, size_t *len);
 
 /* Accesseurs pour les champs toujours presents du paquet.
  * Les valeurs renvoyees sont toutes dans l'endianness native
  * de la machine!
  */
-ptypes_t pkt_get_type     (const packet*);
-uint8_t  pkt_get_tr       (const packet*);
-uint8_t  pkt_get_window   (const packet*);
-uint8_t  pkt_get_seqnum   (const packet*);
-uint16_t pkt_get_length   (const packet*);
-uint32_t pkt_get_timestamp(const packet*);
-uint32_t pkt_get_crc1     (const packet*);
+ptypes_t pkt_get_type     (const pkt_t*);
+uint8_t  pkt_get_tr       (const pkt_t*);
+uint8_t  pkt_get_window   (const pkt_t*);
+uint8_t  pkt_get_seqnum   (const pkt_t*);
+uint16_t pkt_get_length   (const pkt_t*);
+uint32_t pkt_get_timestamp(const pkt_t*);
+uint32_t pkt_get_crc1     (const pkt_t*);
 /* Renvoie un pointeur vers le payload du paquet, ou NULL s'il n'y
  * en a pas.
  */
-const char* pkt_get_payload(const packet*);
+const char* pkt_get_payload(const pkt_t*);
 /* Renvoie le CRC2 dans l'endianness native de la machine. Si
  * ce field n'est pas present, retourne 0.
  */
-uint32_t pkt_get_crc2(const packet*);
+uint32_t pkt_get_crc2(const pkt_t*);
 
 /* Setters pour les champs obligatoires du paquet. Si les valeurs
  * fournies ne sont pas dans les limites acceptables, les fonctions
  * doivent renvoyer un code d'erreur adapte.
  * Les valeurs fournies sont dans l'endianness native de la machine!
  */
-packet_status_code pkt_set_type     (packet*, const ptypes_t type);
-packet_status_code pkt_set_tr       (packet*, const uint8_t tr);
-packet_status_code pkt_set_window   (packet*, const uint8_t window);
-packet_status_code pkt_set_seqnum   (packet*, const uint8_t seqnum);
-packet_status_code pkt_set_length   (packet*, const uint16_t length);
-packet_status_code pkt_set_timestamp(packet*, const uint32_t timestamp);
-packet_status_code pkt_set_crc1     (packet*, const uint32_t crc1);
+pkt_status_code pkt_set_type     (pkt_t*, const ptypes_t type);
+pkt_status_code pkt_set_tr       (pkt_t*, const uint8_t tr);
+pkt_status_code pkt_set_window   (pkt_t*, const uint8_t window);
+pkt_status_code pkt_set_seqnum   (pkt_t*, const uint8_t seqnum);
+pkt_status_code pkt_set_length   (pkt_t*, const uint16_t length);
+pkt_status_code pkt_set_timestamp(pkt_t*, const uint32_t timestamp);
+pkt_status_code pkt_set_crc1     (pkt_t*, const uint32_t crc1);
 /* Defini la valeur du champs payload du paquet.
  * @data: Une succession d'octets representants le payload
  * @length: Le nombre d'octets composant le payload
  * @POST: pkt_get_length(pkt) == length */
-packet_status_code pkt_set_payload(packet*,
+pkt_status_code pkt_set_payload(pkt_t*,
                                    const char *data,
                                    const uint16_t length);
 /* Setter pour CRC2. Les valeurs fournies sont dans l'endianness
  * native de la machine!
  */
-packet_status_code pkt_set_crc2(packet*, const uint32_t crc2);
+pkt_status_code pkt_set_crc2(pkt_t*, const uint32_t crc2);
 
 #endif //NETWORKPROJECT_PACKET_H

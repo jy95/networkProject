@@ -2,46 +2,60 @@
 #include <stdio.h>  /* FILE */
 #include <stdlib.h> // malloc , etc
 #include <string.h>
+#include <arpa/inet.h>
 
+// STRUCT
+struct header {
+    // explicit packing
+    struct __attribute__((__packed__)) bitFields {
+        unsigned int type:2;
+        unsigned int trFlag:1; //tr flag
+        unsigned int window:5; //WINDOW
+    } bitFields;
+    uint8_t seqNum; // numéro de séquence
+    uint16_t length; // la longueur du packet , warning endian
+    uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
+    uint32_t CRC1;
+} head;
 
-packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt) {
+// typedef pour définir un type
+typedef struct pkt {
+    struct header structheader;
+    char *payload; // payload à malloc plus tard
+    uint32_t CRC2; // 2e CRC si payload
+} pkt_t;
 
-    packet_status_code packetStatusCode;
+pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
+
+    pkt_status_code packetStatusCode;
 
     if (len < 12) return E_NOHEADER; //Pas assez de Bytes pour former un header
 
-    struct header header;
+    struct header structheader;
 
-    memcpy(&header, data + 0, 12); //Copie des 12 premiers bytes, qui formeront la structure header
+    memcpy(&structheader, data + 0, 12); //Copie des 12 premiers bytes, qui formeront la structure header
 
     /*- Verification des donnees et ajout de celles-ci dans le paquet -*/
 
-    packetStatusCode = pkt_set_type(pkt, (const ptypes_t) header.bitFields.type);
-
+    packetStatusCode = pkt_set_type(pkt, (const ptypes_t) structheader.bitFields.type);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_tr(pkt, (const uint8_t) header.bitFields.trFlag);
-
+    packetStatusCode = pkt_set_tr(pkt, (const uint8_t) structheader.bitFields.trFlag);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_window(pkt, (const uint8_t) header.bitFields.window);
-
+    packetStatusCode = pkt_set_window(pkt, (const uint8_t) structheader.bitFields.window);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_seqnum(pkt, header.seqNum);
-
+    packetStatusCode = pkt_set_seqnum(pkt, structheader.seqNum);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_length(pkt, header.length);
-
+    packetStatusCode = pkt_set_length(pkt, structheader.length);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_timestamp(pkt, header.timestamp);
-
+    packetStatusCode = pkt_set_timestamp(pkt, structheader.timestamp);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_crc1(pkt, header.CRC1);
-
+    packetStatusCode = pkt_set_crc1(pkt, structheader.CRC1);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
     /*- Le cas du payload -*/
@@ -50,7 +64,7 @@ packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt) {
 
     if (length > 0 && pkt_get_tr(pkt) == 0) {
 
-        if (len < 12 + length)
+        if (len < (size_t) (12 + length))
             return E_UNCONSISTENT; //La longueur annoncee par length n'est pas pas disponible dans data
 
         const char *payload;
@@ -61,7 +75,7 @@ packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt) {
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-        if (len < 12 + length + 4) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
+        if (len < (size_t)(12 + length + 4)) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
 
         uint32_t CRC2;
 
@@ -75,99 +89,117 @@ packet_status_code pkt_decode(const char *data, const size_t len, packet *pkt) {
     return PKT_OK;
 }
 
-packet_status_code pkt_encode(const packet *p, char *buf, size_t *len) {
-    // TODO
+pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
+    if (sizeof(p) > *len) return E_NOMEM;
+
+    uint16_t length = p->structheader.length;
+
+    if (length > MAX_PAYLOAD_SIZE) return E_LENGTH;
+
+    memcpy(buf, (p->structheader).bitFields, sizeof(uint8_t));
+    memcpy(buf + 1, pkt_get_seqnum(p), sizeof(uint8_t));
+    memcpy(buf + 2, pkt_get_length(p), sizeof(uint16_t));
+    memcpy(buf + 4, pkt_get_timestamp(p), sizeof(uint32_t));
+    memcpy(buf + 8, pkt_get_crc1(p), sizeof(uint32_t));
+
+    if (pkt_get_tr(p) == 0 && length > 0) {
+        memcpy(buf + 12, pkt_get_payload(p), length);
+        memcpy(buf + 12 + length, pkt_get_crc2(p), sizeof(uint32_t));
+    }
+
+    return PKT_OK;
+
 }
 
-ptypes_t pkt_get_type(const packet *p) {
-    return (ptypes_t) (p->header).bitFields.type;
+ptypes_t pkt_get_type(const pkt_t *p) {
+    return (ptypes_t) (p->structheader).bitFields.type;
 }
 
-uint8_t pkt_get_tr(const packet *p) {
-    return (uint8_t) (p->header).bitFields.trFlag;
+uint8_t pkt_get_tr(const pkt_t *p) {
+    return (uint8_t) (p->structheader).bitFields.trFlag;
 }
 
-uint8_t pkt_get_window(const packet *p) {
-    return (uint8_t) (p->header).bitFields.window;
+uint8_t pkt_get_window(const pkt_t *p) {
+    return (uint8_t) (p->structheader).bitFields.window;
 }
 
-uint8_t pkt_get_seqnum(const packet *p) {
-    return (p->header).seqNum;
+uint8_t pkt_get_seqnum(const pkt_t *p) {
+    return (p->structheader).seqNum;
 }
 
-uint16_t pkt_get_length(const packet *p) {
-    return htons((p->header).length);
+uint16_t pkt_get_length(const pkt_t *p) {
+    return htons((p->structheader).length);
 }
 
-uint32_t pkt_get_timestamp(const packet *p) {
-    return (p->header).timestamp;
+uint32_t pkt_get_timestamp(const pkt_t *p) {
+    return (p->structheader).timestamp;
 }
 
-uint32_t pkt_get_crc1(const packet *p) {
-    return htonl((p->header).CRC1);
+uint32_t pkt_get_crc1(const pkt_t *p) {
+    return htonl((p->structheader).CRC1);
 }
 
-const char *pkt_get_payload(const packet *p) {
+const char *pkt_get_payload(const pkt_t *p) {
     return (const char *) p->payload;
 }
 
-uint32_t pkt_get_crc2(const packet *p) {
+uint32_t pkt_get_crc2(const pkt_t *p) {
     return htonl(p->CRC2);
 }
 
 
-packet_status_code pkt_set_type(packet *p, const ptypes_t type) {
+pkt_status_code pkt_set_type(pkt_t *p, const ptypes_t type) {
     if (type != 1 && type != 2 && type != 3) return E_TYPE;
 
-    (p->header).bitFields.type = type;
+    (p->structheader).bitFields.type = type;
 
     return PKT_OK;
 }
 
-packet_status_code pkt_set_tr(packet *p, const uint8_t tr) {
+pkt_status_code pkt_set_tr(pkt_t *p, const uint8_t tr) {
     if (tr != 1 && tr != 0) return E_TR;
 
-    (p->header).bitFields.trFlag = tr;
+    (p->structheader).bitFields.trFlag = tr;
 
     return PKT_OK;
 }
 
-packet_status_code pkt_set_window(packet *p, const uint8_t window) {
+pkt_status_code pkt_set_window(pkt_t *p, const uint8_t window) {
     if (window > MAX_WINDOW_SIZE || window < 1) return E_WINDOW;
 
-    (p->header).bitFields.window = window;
+    (p->structheader).bitFields.window = window;
 
     return PKT_OK;
 }
 
-packet_status_code pkt_set_seqnum(packet *p, const uint8_t seqnum) {
+pkt_status_code pkt_set_seqnum(pkt_t *p, const uint8_t seqnum) {
 
-    (p->header).seqNum = seqnum;
+    (p->structheader).seqNum = seqnum;
 
     return PKT_OK;
 }
 
-packet_status_code pkt_set_length(packet *p, const uint16_t length) {
+pkt_status_code pkt_set_length(pkt_t *p, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_LENGTH;
 
 
-    (p->header).length = length;
+    (p->structheader).length = length;
 
     return PKT_OK;
 }
 
-packet_status_code pkt_set_timestamp(packet *p, const uint32_t timestamp) {
-    (p->header).timestamp = timestamp;
+pkt_status_code pkt_set_timestamp(pkt_t *p, const uint32_t timestamp) {
+    (p->structheader).timestamp = timestamp;
     return PKT_OK;
 }
 
-packet_status_code pkt_set_crc1(packet *p, const uint32_t crc1) {
-    (p->header).CRC1 = crc1;
+pkt_status_code pkt_set_crc1(pkt_t *p, const uint32_t crc1) {
+    (p->structheader).CRC1 = crc1;
     return PKT_OK;
 }
 
 
-packet_status_code pkt_set_payload(packet *p, const char *data, const uint16_t length) {
+pkt_status_code pkt_set_payload(pkt_t *p, const char *data, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_NOMEM;
 
     char *payload = malloc(sizeof(char) * length);
@@ -188,7 +220,6 @@ packet_status_code pkt_set_payload(packet *p, const char *data, const uint16_t l
 
 }
 
-packet_status_code pkt_set_crc2(packet *p, const uint32_t crc2) {
+pkt_status_code pkt_set_crc2(pkt_t *p, const uint32_t crc2) {
     p->CRC2 = ntohl(crc2);
     return PKT_OK;
-}
