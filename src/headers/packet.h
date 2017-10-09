@@ -45,6 +45,14 @@ typedef enum {
 
 // FUNCTIONS
 
+/* Alloue et initialise une struct pkt
+ * @return: NULL en cas d'erreur */
+pkt_t* pkt_new();
+/* Libere le pointeur vers la struct pkt, ainsi que toutes les
+ * ressources associees
+ */
+void pkt_del(pkt_t*);
+
 /*
  * Decode des donnees recues et cree une nouvelle structure pkt.
  * Le paquet recu est en network byte-order.
