@@ -10,8 +10,11 @@
 #include <sys/time.h> // timeout pour select
 #include <sys/types.h> // read, write
 #include <unistd.h>
+#include <errno.h>
 
 #define BUFFER_LENGTH   1024
+
+extern int errno ;
 
 const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     // les options pour getaddrinfo
@@ -24,7 +27,7 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     options.ai_family = AF_INET6; // IPV6
     options.ai_socktype = SOCK_DGRAM; // SOCK_DGRAM ou SOCK_STREAM
     options.ai_flags = 0;
-    options.ai_protocol = 0;          /* N'importe quel protocol (pas nécessaire) */
+    options.ai_protocol = IPPROTO_UDP;
 
     // on essaye de trouver une adresse
     // service à NULL parce qu'on a pas un numéro de port précis
@@ -38,17 +41,15 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
         // en théorie , la structure addrinfo est récursive
         // nous, nous n'avons besoin que de la première adresse IPv6 qu'il a trouvé
 
-        // un memccpy pour récupérer les infos dans la structure
-        memcpy (rval, result->ai_addr, result->ai_addrlen);
+        // http://beej.us/guide/bgnet/output/html/multipage/syscalls.html#getaddrinfo
+        // 5.1. getaddrinfo()—Prepare to launch!
 
-        // pour s'assurer que le numéro de port est bien dans l'endianisme de la machine
-        rval->sin6_port = htons(rval->sin6_port);
+        // manière simple de copier l'info
+        rval = (struct sockaddr_in6 *) result->ai_addr;
 
-        // et que c'est de IPV6
-        rval->sin6_family = AF_INET6;
-
-        // on libère la ressource temporaire
-        freeaddrinfo(result);
+        if (rval)
+            // on libère la ressource temporaire
+            freeaddrinfo(result);
 
         return NULL;
     }
@@ -136,7 +137,8 @@ void read_write_loop(int sfd){
     result = select(maxFd, &readfds, NULL , NULL , &tv);
 
     if (result == -1){
-        fprintf(stderr,"Error with select\n");
+        int errnum = errno;
+        fprintf(stderr, "Error : %s\n", strerror( errnum ));
     } else if (result == 0){
         // timer expiré : ne rien faire
     } else {
