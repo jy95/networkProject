@@ -25,17 +25,18 @@ typedef struct __attribute__((__packed__)) pkt {
     unsigned char *payload; // payload à malloc plus tard
 } pkt_t;
 
-pkt_t* pkt_new() {
-    pkt_t* pkt = malloc(sizeof(struct pkt));
-    if(pkt == NULL) return NULL;
+pkt_t *pkt_new() {
+    pkt_t *pkt = malloc(sizeof(struct pkt));
+    if (pkt == NULL) return NULL;
     return pkt;
 }
 
-void pkt_del(pkt_t* pkt) {
-    if(pkt->payload != NULL) {
+void pkt_del(pkt_t *pkt) {
+    if (pkt->payload != NULL) {
         free(pkt->payload);
     }
 }
+
 pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
     pkt_status_code packetStatusCode;
@@ -88,7 +89,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-        if (len < (size_t)(12 + length + 4)) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
+        if (len < (size_t) (12 + length + 4)) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
 
         uint32_t CRC2;
 
@@ -105,6 +106,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     uint16_t length = pkt_get_length(p);
     size_t totalSize = sizeof(p->structheader) + sizeof(p->CRC2) + length;
+    fprintf(stderr, "total size : %zu", totalSize);
 
     if (totalSize > *len) return E_NOMEM;
 
@@ -117,6 +119,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
 
     // on augmente la taille
     *len += sizeof(struct bitFields);
+    fprintf(stderr, "total size - bitfield : %zu", *len);
 
     uint8_t segnum = pkt_get_seqnum(p);
     // au lieu de faire buf +1, utilisons la length qu'on incrémente
@@ -124,37 +127,46 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
 
     // on augmente la taille
     *len += sizeof(uint8_t);
+    fprintf(stderr, "total size - seqnum : %zu", *len);
 
     uint16_t length_network = htons(pkt_get_length(p));
     memcpy(buf + *len, &length_network, sizeof(uint16_t));
 
     // on augmente la taille
     *len += sizeof(uint16_t);
+    fprintf(stderr, "total size - length : %zu", *len);
 
     uint32_t timestamp = pkt_get_timestamp(p);
     memcpy(buf + *len, &timestamp, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
+    fprintf(stderr, "total size - timestamp : %zu", *len);
 
     uint32_t crc1 = htonl(pkt_get_crc1(p));
     memcpy(buf + *len, &crc1, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
+    fprintf(stderr, "total size - crc1 : %zu", *len);
 
     if (pkt_get_tr(p) == 0 && length > 0) {
         memcpy(buf + *len, pkt_get_payload(p), length);
 
         // on augmente la taille
         *len += sizeof(length);
+        fprintf(stderr, "total size - payload : %zu", *len);
 
         uint32_t crc2 = htonl(pkt_get_crc2(p));
         memcpy(buf + *len, &crc2, sizeof(uint32_t));
 
         // on augmente la taille
         *len += sizeof(uint32_t);
+        fprintf(stderr, "total size - crc2 : %zu", *len);
+
     }
+
+    exit(-1);
 
     return PKT_OK;
 
@@ -189,7 +201,7 @@ uint32_t pkt_get_crc1(const pkt_t *p) {
 }
 
 const char *pkt_get_payload(const pkt_t *p) {
-    return p->payload;
+    return (const char *) p->payload;
 }
 
 uint32_t pkt_get_crc2(const pkt_t *p) {
@@ -251,18 +263,19 @@ pkt_status_code pkt_set_payload(pkt_t *p, const char *data, const uint16_t lengt
     if (length > MAX_PAYLOAD_SIZE) return E_NOMEM;
 
     // directement faire un malloc du pointeur du payload
-    if ( ( p->payload = malloc( length * sizeof(unsigned char) )) == NULL) {
+    if ((p->payload = malloc(length * sizeof(unsigned char))) == NULL) {
         return E_NOMEM;
     }
 
     // on peut stocker notre payload
-    memcpy(p->payload,data,length);
+    memcpy(p->payload, data, length);
 
     // on doit setter la length qu'on vient de copier
-    return pkt_set_length(p,length);
+    return pkt_set_length(p, length);
 }
 
 pkt_status_code pkt_set_crc2(pkt_t *p, const uint32_t crc2) {
     p->CRC2 = crc2;
     return PKT_OK;
 }
+
