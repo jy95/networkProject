@@ -41,11 +41,11 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
     pkt_status_code packetStatusCode;
 
-    if (len < 12) return E_NOHEADER; //Pas assez de Bytes pour former un header
+    if (len < sizeof(struct header)) return E_NOHEADER; //Pas assez de Bytes pour former un header
 
     struct header structheader;
 
-    memcpy(&structheader, data + 0, 12); //Copie des 12 premiers bytes, qui formeront la structure header
+    memcpy(&structheader, data , sizeof(struct header)); //Copie des 12 premiers bytes, qui formeront la structure header
 
     /*- Verification des donnees et ajout de celles-ci dans le paquet -*/
 
@@ -106,7 +106,6 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     uint16_t length = pkt_get_length(p);
     size_t totalSize = sizeof(struct header) + sizeof(uint32_t) + length;
-    fprintf(stderr, "total size : %zu", totalSize);
 
     if (totalSize > *len) return E_NOMEM;
 
@@ -114,12 +113,14 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // on initialize le nombre inscrits à 0;
     *len = 0;
 
-    // préférable de prendre la taille de la structure bitFields (1 byte)
-    memcpy(buf, &((p->structheader).bitFields), sizeof(struct bitFields));
+    // le buffer doit être en network byte-order !!!!
+
+    // Bit shiffing
+    uint8_t bitfields = (pkt_get_type(p) << 6) | (pkt_get_tr(p) << 5) | (pkt_get_window(p));
+    memcpy(buf, &bitfields, sizeof(uint8_t));
 
     // on augmente la taille
-    *len += sizeof(struct bitFields);
-    fprintf(stderr, "total size - bitfield : %zu\n", *len);
+    *len += sizeof(uint8_t);
 
     uint8_t segnum = pkt_get_seqnum(p);
     // au lieu de faire buf +1, utilisons la length qu'on incrémente
@@ -127,28 +128,24 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
 
     // on augmente la taille
     *len += sizeof(uint8_t);
-    fprintf(stderr, "total size - seqnum : %zu\n", *len);
 
     uint16_t length_network = htons(pkt_get_length(p));
     memcpy(buf + *len, &length_network, sizeof(uint16_t));
 
     // on augmente la taille
     *len += sizeof(uint16_t);
-    fprintf(stderr, "total size - length : %zu\n", *len);
 
     uint32_t timestamp = pkt_get_timestamp(p);
     memcpy(buf + *len, &timestamp, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
-    fprintf(stderr, "total size - timestamp : %zu\n", *len);
 
     uint32_t crc1 = htonl(pkt_get_crc1(p));
     memcpy(buf + *len, &crc1, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
-    fprintf(stderr, "total size - crc1 : %zu\n", *len);
 
     if (pkt_get_tr(p) == 0 && length > 0) {
         memcpy(buf + *len, pkt_get_payload(p), length);
@@ -165,11 +162,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
         fprintf(stderr, "total size - crc2 : %zu\n", *len);
 
     }
-    // pour break
-    exit(-1);
-
     return PKT_OK;
-
 }
 
 ptypes_t pkt_get_type(const pkt_t *p) {
