@@ -60,18 +60,20 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
     packetStatusCode = pkt_set_seqnum(pkt, structheader.seqNum);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_length(pkt, structheader.length);
+    uint16_t length = ntohs(structheader.length);
+
+    packetStatusCode = pkt_set_length(pkt, length);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
     packetStatusCode = pkt_set_timestamp(pkt, structheader.timestamp);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_crc1(pkt, structheader.CRC1);
+    uint32_t crc1 = ntohl(structheader.CRC1);
+
+    packetStatusCode = pkt_set_crc1(pkt, crc1);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
     /*- Le cas du payload -*/
-
-    uint16_t length = pkt_get_length(pkt);
 
     if (length > 0 && pkt_get_tr(pkt) == 0) {
 
@@ -92,7 +94,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
         memcpy(&CRC2, data + 12 + length, 4); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
 
-        packetStatusCode = pkt_set_crc2(pkt, CRC2);
+        packetStatusCode = pkt_set_crc2(pkt, ntohl(CRC2));
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
     }
@@ -101,9 +103,6 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 }
 
 pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
-    // sizeof(p) : sorry mais un sizeof d'une structure avec un pointeur comme membre
-    // cela coince toujours , à la place :
-    // On calcule la taille des éléments séparément
     uint16_t length = pkt_get_length(p);
     size_t totalSize = sizeof(p->structheader) + sizeof(p->CRC2) + length;
 
@@ -126,7 +125,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // on augmente la taille
     *len += sizeof(uint8_t);
 
-    uint16_t length_network = pkt_get_length(p);
+    uint16_t length_network = htons(pkt_get_length(p));
     memcpy(buf + *len, &length_network, sizeof(uint16_t));
 
     // on augmente la taille
@@ -138,7 +137,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // on augmente la taille
     *len += sizeof(uint32_t);
 
-    uint32_t crc1 = pkt_get_crc1(p);
+    uint32_t crc1 = htonl(pkt_get_crc1(p));
     memcpy(buf + *len, &crc1, sizeof(uint32_t));
 
     // on augmente la taille
@@ -150,7 +149,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
         // on augmente la taille
         *len += sizeof(length);
 
-        uint32_t crc2 = pkt_get_crc2(p);
+        uint32_t crc2 = htonl(pkt_get_crc2(p));
         memcpy(buf + *len, &crc2, sizeof(uint32_t));
 
         // on augmente la taille
@@ -178,7 +177,7 @@ uint8_t pkt_get_seqnum(const pkt_t *p) {
 }
 
 uint16_t pkt_get_length(const pkt_t *p) {
-    return htons((p->structheader).length);
+    return (p->structheader).length;
 }
 
 uint32_t pkt_get_timestamp(const pkt_t *p) {
@@ -186,15 +185,15 @@ uint32_t pkt_get_timestamp(const pkt_t *p) {
 }
 
 uint32_t pkt_get_crc1(const pkt_t *p) {
-    return htonl((p->structheader).CRC1);
+    return (p->structheader).CRC1;
 }
 
 const char *pkt_get_payload(const pkt_t *p) {
-    return (const char *) p->payload;
+    return p->payload;
 }
 
 uint32_t pkt_get_crc2(const pkt_t *p) {
-    return htonl(p->CRC2);
+    return p->CRC2;
 }
 
 
@@ -271,6 +270,6 @@ pkt_status_code pkt_set_payload(pkt_t *p, const char *data, const uint16_t lengt
 }
 
 pkt_status_code pkt_set_crc2(pkt_t *p, const uint32_t crc2) {
-    p->CRC2 = ntohl(crc2);
+    p->CRC2 = crc2;
     return PKT_OK;
 }
