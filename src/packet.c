@@ -22,7 +22,7 @@ struct __attribute__((__packed__)) header {
 typedef struct __attribute__((__packed__)) pkt {
     struct header structheader;
     uint32_t CRC2; // 2e CRC si payload
-    char *payload; // payload à malloc plus tard
+    unsigned char *payload; // payload à malloc plus tard
 } pkt_t;
 
 pkt_t* pkt_new() {
@@ -231,7 +231,6 @@ pkt_status_code pkt_set_seqnum(pkt_t *p, const uint8_t seqnum) {
 pkt_status_code pkt_set_length(pkt_t *p, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_LENGTH;
 
-
     (p->structheader).length = length;
 
     return PKT_OK;
@@ -251,22 +250,16 @@ pkt_status_code pkt_set_crc1(pkt_t *p, const uint32_t crc1) {
 pkt_status_code pkt_set_payload(pkt_t *p, const char *data, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_NOMEM;
 
-    char *payload = malloc(sizeof(char) * length);
-
-    if (payload == NULL) return E_NOMEM;
-
-    int i = 0;
-
-    while (i < length) {
-        *(payload + i) = (unsigned char) *(data + i);
-        i++;
+    // directement faire un malloc du pointeur du payload
+    if ( ( p->payload = malloc( length * sizeof(unsigned char) )) == NULL) {
+        return E_NOMEM;
     }
 
-    p->payload = payload;
+    // on peut stocker notre payload
+    memcpy(p->payload,data,length);
 
-    return PKT_OK;
-
-
+    // on doit setter la length qu'on vient de copier
+    return pkt_set_length(p,length);
 }
 
 pkt_status_code pkt_set_crc2(pkt_t *p, const uint32_t crc2) {
