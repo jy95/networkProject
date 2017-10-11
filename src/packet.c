@@ -3,6 +3,7 @@
 #include <stdlib.h> // malloc , etc
 #include <string.h>
 #include <arpa/inet.h>
+#include <zlib.h> //crc32
 
 // STRUCT
 struct __attribute__((__packed__)) header {
@@ -106,6 +107,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     uint16_t length = pkt_get_length(p);
     size_t totalSize = sizeof(struct header) + sizeof(uint32_t) + length;
+    uint32_t crc1 = crc32(0L, Z_NULL, 0); // init du crc1
 
     if (totalSize > *len) return E_NOMEM;
 
@@ -118,6 +120,9 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // Bit shiffing
     uint8_t bitfields = (pkt_get_type(p) << 6) | (pkt_get_tr(p) << 5) | (pkt_get_window(p));
     memcpy(buf, &bitfields, sizeof(uint8_t));
+    // le crc1 doit prendre tous les bitfields , sauf TR qui doit être à 0
+    uint8_t bitfieldsForCRC = (pkt_get_type(p) << 6) | (0 << 5) | (pkt_get_window(p));
+    crc1 = crc32(crc1, &bitfieldsForCRC, sizeof(uint8_t));
 
     // on augmente la taille
     *len += sizeof(uint8_t);
@@ -125,24 +130,31 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     uint8_t segnum = pkt_get_seqnum(p);
     // au lieu de faire buf +1, utilisons la length qu'on incrémente
     memcpy(buf + *len, &segnum, sizeof(uint8_t));
+    // le crc1 doit prendre aussi le numéro de séquence
+    crc1 = crc32(crc1, &segnum, sizeof(uint8_t));
 
     // on augmente la taille
     *len += sizeof(uint8_t);
 
     uint16_t length_network = htons(pkt_get_length(p));
     memcpy(buf + *len, &length_network, sizeof(uint16_t));
+    // le crc1 doit aussi prendre la length
+    crc1 = crc32(crc1, &length_network, sizeof(uint16_t));
 
     // on augmente la taille
     *len += sizeof(uint16_t);
 
     uint32_t timestamp = pkt_get_timestamp(p);
     memcpy(buf + *len, &timestamp, sizeof(uint32_t));
+    // le crc1 doit aussi prendre le timestamp
+    crc1 = crc32(crc1, &timestamp, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
 
-    uint32_t crc1 = htonl(pkt_get_crc1(p));
-    memcpy(buf + *len, &crc1, sizeof(uint32_t));
+    // la version Network byte order du crc1
+    uint32_t crc1NBO = htonl(crc1);
+    memcpy(buf + *len, &crc1NBO, sizeof(uint32_t));
 
     // on augmente la taille
     *len += sizeof(uint32_t);
@@ -154,8 +166,13 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
         *len += sizeof(length);
         fprintf(stderr, "total size - payload : %zu\n", *len);
 
-        uint32_t crc2 = htonl(pkt_get_crc2(p));
-        memcpy(buf + *len, &crc2, sizeof(uint32_t));
+        // calcul du crc2
+        uint32_t crc2 = crc32(0L, Z_NULL, 0); // init du crc2
+        crc2 = crc32(crc2, pkt_get_payload(p), length);
+
+        uint32_t crc2NBO = htonl(crc2);
+        memcpy(buf + *len, &crc2NBO, sizeof(uint32_t));
+        // on rajoute le crc2
 
         // on augmente la taille
         *len += sizeof(uint32_t);
@@ -197,8 +214,14 @@ const char *pkt_get_payload(const pkt_t *p) {
     return (const char *) p->payload;
 }
 
+/* Renvoie le CRC2 dans l'endianness native de la machine. Si
+ * ce field n'est pas present, retourne 0.
+ */
 uint32_t pkt_get_crc2(const pkt_t *p) {
-    return p->CRC2;
+    if (pkt_get_tr(p) == 0 && pkt_get_length(p) > 0){
+        return p->CRC2;
+    }
+    return 0;
 }
 
 

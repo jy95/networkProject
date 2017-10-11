@@ -1,7 +1,3 @@
-//
-// Created by jy95 on 05/10/2017.
-//
-
 #include <stddef.h> /* size_t */
 #include <inttypes.h> /* unit8_t */
 
