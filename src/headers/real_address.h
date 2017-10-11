@@ -8,6 +8,12 @@
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
 
+typedef struct option {
+    const char* filename;
+    const char* domaine;
+    const char* port;
+} option_t;
+
 /* Resolve the resource name to an usable IPv6 address
  * @address: The name to resolve
  * @rval: Where the resulting IPv6 address descriptor should be stored
@@ -17,5 +23,8 @@
  *           so do not use malloc!)
  */
 const char * real_address(const char *address, struct sockaddr_in6 *rval);
+
+const char * real_full_address(const char *address, const char* port, struct sockaddr_in6 *rval);
+
 
 #endif //NETWORKPROJECT_REAL_ADDRESS_H
