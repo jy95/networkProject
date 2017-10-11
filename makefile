@@ -11,6 +11,15 @@ CFLAGS += -fstack-protector-all # Add canary code to detect stack smashing
 # the symbols for debugging
 LDFLAGS= -rdynamic
 
+# Default compiler
+CC=gcc
+
+# source folder
+SOURCE_FOLDER=src
+PACKET_OBJECT= $(addprefix $(SOURCE_FOLDER)/,packet.o)
+SERVER_OBJECTS= $(addprefix $(SOURCE_FOLDER)/,server.o)
+CLIENT_OBJECTS= $(addprefix $(SOURCE_FOLDER)/,client.o)
+
 # Default target
 all: clean server client
 
@@ -23,9 +32,11 @@ debug: clean
 # compile them and link the resulting *.o's into an executable named database
 #database: record.o database.o
 
-client: // TODO
+client: $(SOURCE_FOLDER)/client.o $(SOURCE_FOLDER)/packet.o  $(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(LDFLAGS)
 
-server: // TODO
+server: $(SOURCE_FOLDER)/server.o $(SOURCE_FOLDER)/packet.o  $(CC) $(CFLAGS) $(SERVER_OBJECTS) $(LDFLAGS)
+
+$(SOURCE_FOLDER)/paquet: $(SOURCE_FOLDER)/packet.o   $(CC) $(CFLAGS) -lz $(PACKET_OBJECT) $(LDFLAGS)
 
 .PHONY: clean
 

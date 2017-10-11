@@ -4,6 +4,9 @@ cmake-build-debug
 # The file created by CLION
 CMakeLists.txt
 
+# Intellij Idea files
+*.iml
+
 # Got by https://github.com/github/gitignore/blob/master/C.gitignore
 # Prerequisites
 *.d
