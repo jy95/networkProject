@@ -14,8 +14,6 @@
 
 #define BUFFER_LENGTH   1024
 
-extern int errno ;
-
 const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     // les options pour getaddrinfo
     struct addrinfo options;
@@ -62,6 +60,7 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
         return NULL;
     }
 }
+
 
 int create_socket(struct sockaddr_in6 *source_addr,
                   int src_port,

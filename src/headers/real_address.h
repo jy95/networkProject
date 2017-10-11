@@ -8,10 +8,10 @@
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
 
-typedef struct option {
-    const char* filename;
-    const char* domaine;
-    const char* port;
+typedef struct option { //Regroupe trois type d'argument possibles
+    const char* filename; //le nom de fichier avec l'option -f
+    const char* domaine; // le nom de domain ou l'adresse IPV6
+    const char* port; //Le port de destination
 } option_t;
 
 /* Resolve the resource name to an usable IPv6 address
@@ -23,8 +23,6 @@ typedef struct option {
  *           so do not use malloc!)
  */
 const char * real_address(const char *address, struct sockaddr_in6 *rval);
-
-const char * real_full_address(const char *address, const char* port, struct sockaddr_in6 *rval);
 
 
 #endif //NETWORKPROJECT_REAL_ADDRESS_H
