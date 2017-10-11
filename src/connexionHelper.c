@@ -118,12 +118,11 @@ void read_write_loop(int sfd){
 
     // les variables pour opérer avec select
     fd_set readfds ;
-    struct timeval tv;
     int result;
-    int maxFd = sfd + 1; // the max fd + 1 for select;
-
-    // settage du timeout (durée arbitraire : 3 secondes)
-    tv.tv_sec = 3;
+    int stdinFd = fileno(stdin);
+    int stdoutFd = fileno(stdout);
+    int maxFd = ( stdinFd > sfd ) ? stdinFd : sfd ;
+    maxFd++;// the max fd + 1 for select;
 
     // On vide l'ensemble
     FD_ZERO(&readfds);
@@ -131,14 +130,14 @@ void read_write_loop(int sfd){
     // espions pour lecture
 
     // On va espionner STDIN (fd : 0)
-    FD_SET(0, &readfds);
+    FD_SET(stdinFd, &readfds);
 
     // et notre socket (sfd)
     FD_SET(sfd, &readfds);
 
     // On n'a pas besoin de setter ces champs là :
     // writefds , exceptfds
-    result = select(maxFd, &readfds, NULL , NULL , &tv);
+    result = select(maxFd, &readfds, NULL , NULL , NULL);
 
     if (result == -1){
         int errnum = errno;
@@ -150,13 +149,13 @@ void read_write_loop(int sfd){
         char    buf[BUFFER_LENGTH];
 
         // Des données sont disponibles sur stdin
-        if (FD_ISSET(0, &readfds)) {
+        if (FD_ISSET(stdinFd, &readfds)) {
 
             // on s'assure que ce buffer est vide
             memset(buf,0,BUFFER_LENGTH);
 
             // lecture réussie
-            if ( read(0,buf,BUFFER_LENGTH) >= 0 ){
+            if ( read(stdinFd,buf,BUFFER_LENGTH) >= 0 ){
                 // On s'assure qu'il y ait bien un \0 à la fin
                 int bufferLength = strlen(buf) -1;
                 if (buf[bufferLength] == '\n')
@@ -187,7 +186,7 @@ void read_write_loop(int sfd){
                     buf[bufferLength] = '\0';
 
                 // On envoit tout cela sur STDOUT (FD : 1)
-                if ( write(1,buf,BUFFER_LENGTH) < 0 ){
+                if ( write(stdoutFd,buf,BUFFER_LENGTH) < 0 ){
                     fprintf(stderr,"Cannot write message to socket\n");
                 }
 
