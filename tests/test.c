@@ -3,11 +3,11 @@
 //
 #include "../src/paquet/packet_interface.h"
 #include <stdlib.h>
-#include <CUnit/Basic.h>
 #include <CUnit/CUnit.h>
+#include <CUnit/Basic.h>
 
-pkt_t *p;
-pkt_t *packet;
+struct pkt *p;
+struct pkt *packet;
 
 
 // @pkt_get_type:test_packet_get_type[type == PTYPE_DATA]
@@ -102,7 +102,7 @@ void test_packet_set_crc2(void) {
 
 // @pkt_get_payload:test_packet_set_payload => [set de "hello world" ; doit renvoyer un PKT_OK]
 void test_packet_set_payload(void) {
-    pkt_t *packetTest = pkt_new();
+    struct pkt *packetTest = pkt_new();
     pkt_set_tr(packetTest, 0);
     pkt_set_length(packetTest, 11);
     CU_ASSERT_EQUAL(pkt_set_payload(packetTest, "hello world", 11), PKT_OK);
@@ -110,11 +110,11 @@ void test_packet_set_payload(void) {
     free(packetTest);
 }
 
-int main() {
+int main(void) {
 
     //Suite de tests pour les getters
 
-    p = malloc(sizeof(pkt_t));
+    p = malloc(sizeof(struct pkt));
 
     if (p == NULL) {
         return EXIT_FAILURE;
@@ -131,7 +131,7 @@ int main() {
     pkt_set_payload(p, "hello world", 11);
 
     //Suite de tests pour les setters
-    packet = malloc(sizeof(pkt_t));
+    packet = malloc(sizeof(struct pkt));
 
     if (packet == NULL) {
         return EXIT_FAILURE;
