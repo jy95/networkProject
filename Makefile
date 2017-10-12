@@ -9,13 +9,14 @@ CFLAGS += -fstack-protector-all # Add canary code to detect stack smashing
 
 # We have no libraries to link against except libc, but we want to keep
 # the symbols for debugging
-LDFLAGS = -rdynamic
+LDFLAGS += -rdynamic
+LDFLAGS += -lz
+LDFLAGS += -lcunit
 
 # external libs
 # par défaut les chemins classiques
-
-LDFLAGS += -I$(HOME)/local/include
-LDFLAGS += -L$(HOME)/local/lib
+INCLUDES += -I$(HOME)/local/include
+INCLUDES += -L$(HOME)/local/lib
 
 # Default compiler
 CC=gcc
@@ -40,6 +41,7 @@ PACKET_SOURCES = $(wildcard $(PAQUET_FULL_PATH)/*.c)
 SEND_RECEIVE_DATA_SOURCES = $(wildcard $(SEND_RECEIVE_DATA_FULL_PATH)/*.c)
 CLIENT_SOURCES = $(wildcard $(CLIENT_FULL_PATH)/*.c)
 SERVER_SOURCES = $(wildcard $(SERVER_FULL_PATH)/*.c)
+TESTS_SOURCES = $(wildcard $(TESTS_FOLDER)/*.c)
 
 # objects
 
@@ -62,17 +64,13 @@ debug: clean
 #database: record.o database.o
 
 client: $(CLIENT_OBJECTS) $(PACKET_OBJECTS); \
-		$(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(LDFLAGS);
+		$(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(LDFLAGS) -o client;
 
 server: $(SERVER_OBJECTS) $(PACKET_OBJECTS); \
-		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(LDFLAGS);
+		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(LDFLAGS) -o server;
 
-# Une règle spéficique pour builder paquet
-$(PACKET_OBJECTS): $(PACKET_OBJECTS); \
-   		$(CC) -c $(CFLAGS) -lz $(PACKET_OBJECT) $(LDFLAGS);
-
-tests: $(PACKET_OBJECTS) $(TESTS_OBJECTS); \
-		$(CC) $(CFLAGS) -lcunit $(LDFLAGS);
+tests: $(PACKET_OBJECTS) $(TESTS_SOURCES); \
+		$(CC) $(CFLAGS) -lcunit $(TESTS_SOURCES) $(LDFLAGS) $(INCLUDES) -o testsScript;
 
 .PHONY: clean
 

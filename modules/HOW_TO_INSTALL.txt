@@ -26,6 +26,10 @@ tar -xvzf zlib-1.2.11.tar.gz
 
 CUnit
 
+# manière simple (mais pas autorisé)
+
+sudo apt-get install libcunit1 libcunit1-doc libcunit1-dev
+
 # tuto sur https://sites.uclouvain.be/SystInfo/notes/Outils/html/cunit.html
 
 la dernière version devrait se nommer CUnit-2.1.2-src.tar.bz2
