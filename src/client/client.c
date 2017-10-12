@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "headers/create_socket.h"
-#include "headers/real_address.h"
+#include "../sendAndReceiveData/create_socket.h"
+#include "../sendAndReceiveData/real_address.h"
 
 option_t *get_option_arg(int argc, char *argv[]) {
     int opt;

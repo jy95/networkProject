@@ -1,7 +1,7 @@
-#include "headers/create_socket.h"
-#include "headers/real_address.h"
-#include "headers/read_write_loop.h"
-#include "headers/wait_for_client.h"
+#include "create_socket.h"
+#include "real_address.h"
+#include "read_write_loop.h"
+#include "wait_for_client.h"
 
 #include <netdb.h> // Nécessaire
 #include <stdio.h>

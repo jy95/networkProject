@@ -1,0 +1,52 @@
+Zlib
+
+## Manière simple
+
+sudo apt-get install zlib1g-dev
+
+## Manière complexe
+
+# extract this archive twice into src (so modules/src/zlib.1.2.11)
+
+tar -xvzf zlib-1.2.11.tar.gz
+
+# Go to cd zlib-1.2.11
+
+# Configure
+
+./configure --prefix=$HOME/local
+
+# Replace "/usr/local/zlib" above with the directory path where you want to copy the files and folders. Note: check for any error message.
+
+# Compiling zlib
+ make
+
+# Installation
+ make install
+
+CUnit
+
+# tuto sur https://sites.uclouvain.be/SystInfo/notes/Outils/html/cunit.html
+
+la dernière version devrait se nommer CUnit-2.1.2-src.tar.bz2
+Une fois l’archive téléchargée, ouvrez un terminal et placez-vous dans le dossier où se trouve celle-ci. Exécutez:
+
+$ tar xjvf CUnit-2.1.2-src.tar.bz2
+$ cd CUnit-2.1-2
+$ ./configure --prefix=$HOME/local
+$ make
+$ make install
+
+Une fois ces commandes exécutées, la librairie ainsi que ses fichiers d’entête sont installés dans le dossier $HOME/local
+($HOME est en fait une variable bash qui définit votre répertoire principal).
+Comme vous n’avez pas les droits administrateur, vous ne pouvez pas installer d’application ni de librairie
+dans les chemins classiques (c.-à-d., par exemple dans /usr/lib, /usr/include, /usr/bin).
+C’est pour cela que nous installons la librairie dans un dossier local.
+
+Comme la librairie n’est pas installée dans les chemins classiques,
+il faut pouvoir dire à gcc où se trouvent les fichiers d’entête ainsi que la librairie afin d’éviter les erreurs de compilation.
+
+Lors de l’exécution, il faut également spécifier où se trouvent les librairies. Par exemple pour un binaire test qui utilise la librairie CUnit, on peut exécuter:
+
+$ export LD_LIBRARY_PATH=$HOME/local/lib:$LD_LIBRARY_PATH
+$ ./test

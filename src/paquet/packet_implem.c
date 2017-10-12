@@ -1,4 +1,4 @@
-#include "headers/packet.h"
+#include "packet_interface.h"
 #include <stdio.h>  /* FILE */
 #include <stdlib.h> // malloc , etc
 #include <string.h>
@@ -131,7 +131,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // au lieu de faire buf +1, utilisons la length qu'on incrémente
     memcpy(buf + *len, &segnum, sizeof(uint8_t));
     // le crc1 doit prendre aussi le numéro de séquence
-    crc1 = crc32(crc1, &segnum, sizeof(uint8_t));
+    crc1 = crc32(crc1, (const unsigned char *) &segnum, sizeof(uint8_t));
 
     // on augmente la taille
     *len += sizeof(uint8_t);

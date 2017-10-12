@@ -1,7 +1,7 @@
 //
 // Created by Alexandre Dewit on 12/10/17.
 //
-#include "headers/packet.h"
+#include "../src/paquet/packet_interface.h"
 #include <stdlib.h>
 #include <CUnit/Basic.h>
 #include <CUnit/CUnit.h>
