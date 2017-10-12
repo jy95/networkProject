@@ -48,6 +48,8 @@ SEND_RECEIVE_DATA_OBJECTS=$(SEND_RECEIVE_DATA_SOURCES:.c=.o)
 CLIENT_OBJECTS=$(CLIENT_SOURCES:.c=.o)
 SERVER_OBJECTS=$(SERVER_SOURCES:.c=.o)
 
+# another things
+
 # Default target
 all: clean server client
 
@@ -56,7 +58,6 @@ all: clean server client
 debug: CFLAGS += -g -DDEBUG -Wno-unused-parameter -fno-omit-frame-pointer
 debug: clean
 
-# We use an implicit rule: look for the files record.c/database.c,
 # compile them and link the resulting *.o's into an executable named database
 #database: record.o database.o
 
@@ -66,8 +67,9 @@ client: $(CLIENT_OBJECTS) $(PACKET_OBJECTS); \
 server: $(SERVER_OBJECTS) $(PACKET_OBJECTS); \
 		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(LDFLAGS);
 
-$(SOURCE_FOLDER)/paquet: $(PACKET_OBJECTS); \
-   		$(CC) $(CFLAGS) -lz $(PACKET_OBJECT) $(LDFLAGS);
+# Une règle spéficique pour builder paquet
+$(PACKET_OBJECTS): $(PACKET_OBJECTS); \
+   		$(CC) -c $(CFLAGS) -lz $(PACKET_OBJECT) $(LDFLAGS);
 
 tests: $(PACKET_OBJECTS) $(TESTS_OBJECTS); \
 		$(CC) $(CFLAGS) -lcunit $(LDFLAGS);
@@ -75,4 +77,4 @@ tests: $(PACKET_OBJECTS) $(TESTS_OBJECTS); \
 .PHONY: clean
 
 clean:
-	@rm -f **/*.o
+	@rm -f $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(CLIENT_OBJECTS) $(SERVER_OBJECTS)
