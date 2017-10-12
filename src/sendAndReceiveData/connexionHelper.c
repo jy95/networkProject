@@ -6,6 +6,7 @@
 #include <netdb.h> // Nécessaire
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h> // timeout pour select
 #include <sys/types.h> // read, write

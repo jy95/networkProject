@@ -63,10 +63,10 @@ debug: clean
 # compile them and link the resulting *.o's into an executable named database
 #database: record.o database.o
 
-client: $(CLIENT_OBJECTS) $(PACKET_OBJECTS); \
+client: $(CLIENT_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
 		$(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(LDFLAGS) -o client;
 
-server: $(SERVER_OBJECTS) $(PACKET_OBJECTS); \
+server: $(SERVER_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
 		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(LDFLAGS) -o server;
 
 tests: $(PACKET_OBJECTS) $(TESTS_SOURCES); \
