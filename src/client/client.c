@@ -66,6 +66,6 @@ int main(int argc, char *argv[]) {
     if (create_socket(NULL, -1, rval, (int) strtol(option_arg->port, NULL, 10)) < 0)
         return EXIT_FAILURE; //On connecte le client au serveur
 
-
+    return EXIT_SUCCESS;
 }
 

@@ -1,5 +1,5 @@
 # See gcc/clang manual to understand all flags
-CFLAGS += -std=c99 # Define which version of the C standard to use
+#CFLAGS += -std=c99 # Define which version of the C standard to use #WARNING : getopt ne fonctionne pas en 99 mais en 11
 CFLAGS += -Wall # Enable the 'all' set of warnings
 CFLAGS += -Werror # Treat all warnings as error
 CFLAGS += -Wshadow # Warn when shadowing variables

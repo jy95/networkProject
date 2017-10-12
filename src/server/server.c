@@ -7,4 +7,5 @@ int main(int argc, char *argv[]) {
         // blabla
     }
     fprintf(stdout, "Nombre d'arguments : %d\n", argc);
+    return EXIT_SUCCESS;
 }
