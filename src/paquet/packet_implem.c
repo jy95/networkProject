@@ -5,27 +5,6 @@
 #include <arpa/inet.h>
 #include <zlib.h> //crc32
 
-// STRUCT
-struct __attribute__((__packed__)) header {
-    // explicit packing
-    struct __attribute__((__packed__)) bitFields {
-        unsigned int type:2;
-        unsigned int trFlag:1; //tr flag
-        unsigned int window:5; //WINDOW
-    } bitFields;
-    uint8_t seqNum; // numéro de séquence
-    uint16_t length; // la longueur du packet , warning endian
-    uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
-    uint32_t CRC1;
-};
-
-// typedef pour définir un type
-typedef struct __attribute__((__packed__)) pkt {
-    struct header structheader;
-    uint32_t CRC2; // 2e CRC si payload
-    unsigned char *payload; // payload à malloc plus tard
-} pkt_t;
-
 pkt_t *pkt_new() {
     pkt_t *p = malloc(sizeof(pkt_t));
     if (p == NULL) return NULL;
