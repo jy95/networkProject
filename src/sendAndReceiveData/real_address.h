@@ -8,7 +8,7 @@
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
 
-typedef struct option { //Regroupe trois type d'argument possibles
+typedef struct option_arg { //Regroupe trois type d'argument possibles
     const char* filename; //le nom de fichier avec l'option -f
     const char* domaine; // le nom de domain ou l'adresse IPV6
     const char* port; //Le port de destination

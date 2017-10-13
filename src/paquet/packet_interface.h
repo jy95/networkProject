@@ -1,5 +1,5 @@
-#ifndef __PACKET_INTERFACE_H_
-#define __PACKET_INTERFACE_H_
+#ifndef NETWORKPROJECT_PACKET_H
+#define NETWORKPROJECT_PACKET_H
 #include <stddef.h> /* size_t */
 #include <inttypes.h> /* unit8_t */
 #include <stdint.h> /* uintx_t */
@@ -121,4 +121,4 @@ pkt_status_code pkt_set_payload(pkt_t*,
  */
 pkt_status_code pkt_set_crc2(pkt_t*, const uint32_t crc2);
 
-#endif  __PACKET_INTERFACE_H_
+#endif //NETWORKPROJECT_PACKET_H
