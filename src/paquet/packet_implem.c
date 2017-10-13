@@ -5,21 +5,40 @@
 #include <arpa/inet.h>
 #include <zlib.h> //crc32
 
+// STRUCT
+struct __attribute__((__packed__)) header {
+    // explicit packing
+    struct __attribute__((__packed__)) bitFields {
+        unsigned int type:2;
+        unsigned int trFlag:1; //tr flag
+        unsigned int window:5; //WINDOW
+    } bitFields;
+    uint8_t seqNum; // numéro de séquence
+    uint16_t length; // la longueur du packet , warning endian
+    uint32_t timestamp; // En théorie, time_t de time.h donne aussi 32 bits ; par sécurité uint32_t
+    uint32_t CRC1;
+};
 
+// typedef pour définir un type
+typedef struct __attribute__((__packed__)) pkt {
+    struct header structheader;
+    uint32_t CRC2; // 2e CRC si payload
+    unsigned char *payload; // payload à malloc plus tard
+} pkt_t;
 
-struct pkt *pkt_new() {
-    struct pkt *pkt = malloc(sizeof(struct pkt));
-    if (pkt == NULL) return NULL;
-    return pkt;
+pkt_t *pkt_new() {
+    pkt_t *p = malloc(sizeof(pkt_t));
+    if (p == NULL) return NULL;
+    return p;
 }
 
-void pkt_del(struct pkt *pkt) {
+void pkt_del(pkt_t *pkt) {
     if (pkt->payload != NULL) {
         free(pkt->payload);
     }
 }
 
-pkt_status_code pkt_decode(const char *data, const size_t len, struct pkt *pkt) {
+pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
     pkt_status_code packetStatusCode;
 
@@ -27,7 +46,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, struct pkt *pkt) 
 
     struct header structheader;
 
-    memcpy(&structheader, data , sizeof(struct header)); //Copie des 12 premiers bytes, qui formeront la structure header
+    memcpy(&structheader, data, sizeof(struct header)); //Copie des 12 premiers bytes, qui formeront la structure header
 
     /*- Verification des donnees et ajout de celles-ci dans le paquet -*/
 
@@ -85,7 +104,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, struct pkt *pkt) 
     return PKT_OK;
 }
 
-pkt_status_code pkt_encode(const struct pkt *p, char *buf, size_t *len) {
+pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     uint16_t length = pkt_get_length(p);
     size_t totalSize = sizeof(struct header) + sizeof(uint32_t) + length;
     uint32_t crc1 = (uint32_t) crc32(0L, Z_NULL, 0); // init du crc1
@@ -163,50 +182,50 @@ pkt_status_code pkt_encode(const struct pkt *p, char *buf, size_t *len) {
     return PKT_OK;
 }
 
-ptypes_t pkt_get_type(const struct pkt *p) {
+ptypes_t pkt_get_type(const pkt_t *p) {
     return (ptypes_t) (p->structheader).bitFields.type;
 }
 
-uint8_t pkt_get_tr(const struct pkt *p) {
+uint8_t pkt_get_tr(const pkt_t *p) {
     return (uint8_t) (p->structheader).bitFields.trFlag;
 }
 
-uint8_t pkt_get_window(const struct pkt *p) {
+uint8_t pkt_get_window(const pkt_t *p) {
     return (uint8_t) (p->structheader).bitFields.window;
 }
 
-uint8_t pkt_get_seqnum(const struct pkt *p) {
+uint8_t pkt_get_seqnum(const pkt_t *p) {
     return (p->structheader).seqNum;
 }
 
-uint16_t pkt_get_length(const struct pkt *p) {
+uint16_t pkt_get_length(const pkt_t *p) {
     return (p->structheader).length;
 }
 
-uint32_t pkt_get_timestamp(const struct pkt *p) {
+uint32_t pkt_get_timestamp(const pkt_t *p) {
     return (p->structheader).timestamp;
 }
 
-uint32_t pkt_get_crc1(const struct pkt *p) {
+uint32_t pkt_get_crc1(const pkt_t *p) {
     return (p->structheader).CRC1;
 }
 
-const char *pkt_get_payload(const struct pkt *p) {
+const char *pkt_get_payload(const pkt_t *p) {
     return (const char *) p->payload;
 }
 
 /* Renvoie le CRC2 dans l'endianness native de la machine. Si
  * ce field n'est pas present, retourne 0.
  */
-uint32_t pkt_get_crc2(const struct pkt *p) {
-    if (pkt_get_tr(p) == 0 && pkt_get_length(p) > 0){
+uint32_t pkt_get_crc2(const pkt_t *p) {
+    if (pkt_get_tr(p) == 0 && pkt_get_length(p) > 0) {
         return p->CRC2;
     }
     return 0;
 }
 
 
-pkt_status_code pkt_set_type(struct pkt *p, const ptypes_t type) {
+pkt_status_code pkt_set_type(pkt_t *p, const ptypes_t type) {
     if (type != 1 && type != 2 && type != 3) return E_TYPE;
 
     (p->structheader).bitFields.type = type;
@@ -214,7 +233,7 @@ pkt_status_code pkt_set_type(struct pkt *p, const ptypes_t type) {
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_tr(struct pkt *p, const uint8_t tr) {
+pkt_status_code pkt_set_tr(pkt_t *p, const uint8_t tr) {
     if (tr != 1 && tr != 0) return E_TR;
 
     (p->structheader).bitFields.trFlag = tr;
@@ -222,7 +241,7 @@ pkt_status_code pkt_set_tr(struct pkt *p, const uint8_t tr) {
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_window(struct pkt *p, const uint8_t window) {
+pkt_status_code pkt_set_window(pkt_t *p, const uint8_t window) {
     if (window > MAX_WINDOW_SIZE || window < 1) return E_WINDOW;
 
     (p->structheader).bitFields.window = window;
@@ -230,14 +249,14 @@ pkt_status_code pkt_set_window(struct pkt *p, const uint8_t window) {
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_seqnum(struct pkt *p, const uint8_t seqnum) {
+pkt_status_code pkt_set_seqnum(pkt_t *p, const uint8_t seqnum) {
 
     (p->structheader).seqNum = seqnum;
 
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_length(struct pkt *p, const uint16_t length) {
+pkt_status_code pkt_set_length(pkt_t *p, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_LENGTH;
 
     (p->structheader).length = length;
@@ -245,18 +264,18 @@ pkt_status_code pkt_set_length(struct pkt *p, const uint16_t length) {
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_timestamp(struct pkt *p, const uint32_t timestamp) {
+pkt_status_code pkt_set_timestamp(pkt_t *p, const uint32_t timestamp) {
     (p->structheader).timestamp = timestamp;
     return PKT_OK;
 }
 
-pkt_status_code pkt_set_crc1(struct pkt *p, const uint32_t crc1) {
+pkt_status_code pkt_set_crc1(pkt_t *p, const uint32_t crc1) {
     (p->structheader).CRC1 = crc1;
     return PKT_OK;
 }
 
 
-pkt_status_code pkt_set_payload(struct pkt *p, const char *data, const uint16_t length) {
+pkt_status_code pkt_set_payload(pkt_t *p, const char *data, const uint16_t length) {
     if (length > MAX_PAYLOAD_SIZE) return E_NOMEM;
 
     // directement faire un malloc du pointeur du payload
@@ -271,7 +290,7 @@ pkt_status_code pkt_set_payload(struct pkt *p, const char *data, const uint16_t 
     return pkt_set_length(p, length);
 }
 
-pkt_status_code pkt_set_crc2(struct pkt *p, const uint32_t crc2) {
+pkt_status_code pkt_set_crc2(pkt_t *p, const uint32_t crc2) {
     p->CRC2 = crc2;
     return PKT_OK;
 }

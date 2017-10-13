@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include "../sendAndReceiveData/create_socket.h"
 #include "../sendAndReceiveData/real_address.h"
+#include "../sendAndReceiveData/read_write_loop.h"
 
 option_t *get_option_arg(int argc, char *argv[]) {
     int opt;
@@ -63,8 +64,11 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (create_socket(NULL, -1, rval, (int) strtol(option_arg->port, NULL, 10)) < 0)
+    int socketFileDescriptor;
+    if ((socketFileDescriptor = create_socket(NULL, -1, rval, (int) strtol(option_arg->port, NULL, 10))) < 0)
         return EXIT_FAILURE; //On connecte le client au serveur
+
+    read_write_loop(socketFileDescriptor);
 
     return EXIT_SUCCESS;
 }
