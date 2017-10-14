@@ -8,12 +8,6 @@
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
 
-typedef struct option_arg { //Regroupe trois type d'argument possibles
-    const char* filename; //le nom de fichier avec l'option -f
-    const char* domaine; // le nom de domain ou l'adresse IPV6
-    const char* port; //Le port de destination
-} option_t;
-
 /* Resolve the resource name to an usable IPv6 address
  * @address: The name to resolve
  * @rval: Where the resulting IPv6 address descriptor should be stored

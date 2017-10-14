@@ -1,72 +1,53 @@
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <getopt.h>
 #include "../sendAndReceiveData/create_socket.h"
 #include "../sendAndReceiveData/real_address.h"
 #include "../sendAndReceiveData/read_write_loop.h"
-
-option_t *get_option_arg(int argc, char *argv[]) {
-    int opt;
-    const char *filename = NULL;
-    while ((opt = getopt(argc, argv, "f:")) != -1) {
-        switch (opt) {
-            case 'f':
-                filename = optarg;
-
-                if (filename == NULL) {
-                    fprintf(stderr, "L'option -%c requiert un argument\n", optopt);
-                    return NULL;
-                }
-                break;
-            default:
-                fprintf(stderr, "erreur\n");
-                return NULL;
-        }
-    }
-
-    if (optind >= argc) {
-        fprintf(stderr, "Pas assez d'arguments");
-        return NULL;
-    }
-    char *domaine = argv[optind];
-
-    optind++;
-    if (optind >= argc) {
-        fprintf(stderr, "Pas assez d'arguments");
-        return NULL;
-    }
-    char *port = argv[optind];
-    option_t *option_arg = malloc(sizeof(struct option));
-    if (option_arg == NULL) {
-        fprintf(stderr, "Erreur allocation de memoire");
-        return NULL;
-    }
-    option_arg->domaine = domaine;
-    option_arg->filename = filename;
-    option_arg->port = port;
-
-    return option_arg;
-}
+#include "client.h"
 
 int main(int argc, char *argv[]) {
     option_t *option_arg = get_option_arg(argc, argv); //On ajoute dans la structure les infos de la ligne de commande
-    if (option_arg == NULL) return EXIT_FAILURE;
+    if ( option_arg == NULL) return EXIT_FAILURE;
 
-    struct sockaddr_in6 *rval = malloc(sizeof(struct sockaddr_in6));
+    if ( option_arg->filename != NULL ) {
+        FILE *fp;
+        if ((fp = fopen(option_arg->filename, "r+")) == NULL ) {
+            fprintf(stderr, "Le fichier ne peut pas être lue\n");
+            return EXIT_FAILURE;
+        }
+        // maintenant ce fichier doit devenir l'entrée standard
+        // dup2 avec STDIN
+    }
+
+    struct sockaddr_in6 rval;
     const char *message;
-    if ((message = real_address(option_arg->domaine, rval)) !=
-        NULL) { //On transforme l'addresse en structure lisible par la machine
+    if ((message = real_address(option_arg->domaine, &rval)) !=
+        NULL ) { //On transforme l'addresse en structure lisible par la machine
         fprintf(stderr, "%s\n", message);
         return EXIT_FAILURE;
     }
 
+    // on affiche l'adresse IPV6 qu'on utilise
+    char ipAddress[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &(rval.sin6_addr), ipAddress, INET6_ADDRSTRLEN);
+    fprintf(stdout, "Use IPV6 Address: %s\n", ipAddress);
+
     int socketFileDescriptor;
-    if ((socketFileDescriptor = create_socket(NULL, -1, rval, (int) strtol(option_arg->port, NULL, 10))) < 0)
+    if ((socketFileDescriptor = create_socket(NULL, -1, &rval, option_arg->port)) < 0 )
         return EXIT_FAILURE; //On connecte le client au serveur
+
+    fprintf(stdout, "Socket successfully created - listenning to port %d\n", option_arg->port);
+
+    // Step : Calculer le RTT moyen pour envoyer un packet
+    // Algo de base : envoyer 3 paquet tronqués hors séquence pour savoir
+
+
+    // Step : Envoi de message
 
     read_write_loop(socketFileDescriptor);
 

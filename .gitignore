@@ -7,6 +7,11 @@ CMakeLists.txt
 # Intellij Idea files
 *.iml
 
+# Generated exe from makefile
+receiver
+sender
+
+
 # Modules src
 modules/src
 

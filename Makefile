@@ -1,5 +1,5 @@
 # See gcc/clang manual to understand all flags
-#CFLAGS += -std=c99 # Define which version of the C standard to use #WARNING : getopt ne fonctionne pas en 99 mais en 11
+CFLAGS += -std=gnu99 # Define which version of the C standard to use #WARNING : gnu99 sur machine Intel
 CFLAGS += -Wall # Enable the 'all' set of warnings
 CFLAGS += -Werror # Treat all warnings as error
 CFLAGS += -Wshadow # Warn when shadowing variables
@@ -15,8 +15,8 @@ LDFLAGS += -lcunit
 
 # external libs
 # par défaut les chemins classiques
-INCLUDES += -I$(HOME)/local/include
-INCLUDES += -L$(HOME)/local/lib
+#INCLUDES += -I$(HOME)/local/include
+#INCLUDES += -L$(HOME)/local/lib
 
 # Default compiler
 CC=gcc
@@ -53,26 +53,19 @@ SERVER_OBJECTS=$(SERVER_SOURCES:.c=.o)
 # another things
 
 # Default target
-all: clean server client
+all: clean sender receiver
 
-# If we run `make debug` instead, keep the debug symbols for gdb
-# and define the DEBUG macro.
-debug: CFLAGS += -g -DDEBUG -Wno-unused-parameter -fno-omit-frame-pointer
-debug: clean
+sender: $(CLIENT_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
+		$(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(LDFLAGS) -o sender;
 
-# compile them and link the resulting *.o's into an executable named database
-#database: record.o database.o
+receiver: $(SERVER_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
+		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(LDFLAGS) -o receiver;
 
-client: $(CLIENT_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
-		$(CC) $(CFLAGS) $(CLIENT_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(LDFLAGS) -o client;
-
-server: $(SERVER_OBJECTS) $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS); \
-		$(CC) $(CFLAGS) $(SERVER_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(LDFLAGS) -o server;
-
+#$(INCLUDES) si nécessaire
 tests: $(PACKET_OBJECTS) $(TESTS_SOURCES); \
-		$(CC) $(CFLAGS) -lcunit $(TESTS_SOURCES) $(PACKET_OBJECTS) $(LDFLAGS) $(INCLUDES) -o testsScript;
+		$(CC) $(CFLAGS) -lcunit $(TESTS_SOURCES) $(PACKET_OBJECTS) $(LDFLAGS) -o testsScript;
 
 .PHONY: clean
 
 clean:
-	@rm -f $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(CLIENT_OBJECTS) $(SERVER_OBJECTS)
+	@rm -f $(PACKET_OBJECTS) $(SEND_RECEIVE_DATA_OBJECTS) $(CLIENT_OBJECTS) $(SERVER_OBJECTS) sender receiver testsScript
