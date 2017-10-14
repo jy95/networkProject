@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "../src/paquet/packet_interface.h"
 
 struct pkt *p;
 struct pkt *packet;
