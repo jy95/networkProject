@@ -7,13 +7,6 @@
 #include <CUnit/Basic.h>
 #include "../src/paquet/packet_interface.h"
 
-// typedef pour définir un type
-typedef struct __attribute__((__packed__)) pkt {
-    struct header structheader;
-    uint32_t CRC2; // 2e CRC si payload
-    unsigned char *payload; // payload à malloc plus tard
-} pkt_t;
-
 struct pkt *p;
 struct pkt *packet;
 
