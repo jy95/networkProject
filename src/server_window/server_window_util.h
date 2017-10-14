@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 #include "../paquet/packet_interface.h"
-#include "../paquet/packet_stack.h"
+#include "../packet_stack/packet_stack.h"
 
 
 /*- PARTIE WINDOW -*/
