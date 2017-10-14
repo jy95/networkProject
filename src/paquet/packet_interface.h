@@ -8,9 +8,9 @@
 struct __attribute__((__packed__)) header {
     // explicit packing
     struct __attribute__((__packed__)) bitFields {
-        unsigned int type:2;
-        unsigned int trFlag:1; //tr flag
-        unsigned int window:5; //WINDOW
+        uint8_t window:5; //WINDOW
+        uint8_t trFlag:1; //tr flag
+        uint8_t type:2;
     } bitFields;
     uint8_t seqNum; // numéro de séquence
     uint16_t length; // la longueur du packet , warning endian

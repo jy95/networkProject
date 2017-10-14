@@ -6,9 +6,8 @@
 #include <zlib.h> //crc32
 
 pkt_t *pkt_new() {
-    pkt_t *p = malloc(sizeof(pkt_t));
-    if (p == NULL) return NULL;
-    return p;
+    return calloc(1,
+                  sizeof(pkt_t));
 }
 
 void pkt_del(pkt_t *pkt) {
@@ -96,12 +95,13 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
 
     // le buffer doit être en network byte-order !!!!
 
-    // Bit shiffing
-    uint8_t bitfields = (pkt_get_type(p) << 6) | (pkt_get_tr(p) << 5) | (pkt_get_window(p));
-    memcpy(buf, &bitfields, sizeof(uint8_t));
+    // On s'occupe des bitfields (type - flag - window)
+    memcpy(buf, &(p->structheader).bitFields, sizeof(struct bitFields));
+
     // le crc1 doit prendre tous les bitfields , sauf TR qui doit être à 0
+
     uint8_t bitfieldsForCRC = (pkt_get_type(p) << 6) | (0 << 5) | (pkt_get_window(p));
-    crc1 = (uint32_t) crc32(crc1, &bitfieldsForCRC, sizeof(uint8_t));
+    crc1 = (uint32_t) crc32(crc1, (const Bytef *) &(bitfieldsForCRC), sizeof(uint8_t));
 
     // on augmente la taille
     *len += sizeof(uint8_t);
@@ -110,7 +110,7 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
     // au lieu de faire buf +1, utilisons la length qu'on incrémente
     memcpy(buf + *len, &segnum, sizeof(uint8_t));
     // le crc1 doit prendre aussi le numéro de séquence
-    crc1 = (uint32_t) crc32(crc1, (const unsigned char *) &segnum, sizeof(uint8_t));
+    crc1 = (uint32_t) crc32(crc1, (const Bytef *) &segnum, sizeof(uint8_t));
 
     // on augmente la taille
     *len += sizeof(uint8_t);
@@ -142,20 +142,18 @@ pkt_status_code pkt_encode(const pkt_t *p, char *buf, size_t *len) {
         memcpy(buf + *len, pkt_get_payload(p), length);
 
         // on augmente la taille
-        *len += sizeof(length);
-        fprintf(stderr, "total size - payload : %zu\n", *len);
+        *len += length;
 
         // calcul du crc2
         uint32_t crc2 = (uint32_t) crc32(0L, Z_NULL, 0); // init du crc2
         crc2 = (uint32_t) crc32(crc2, (const Bytef *) pkt_get_payload(p), length);
 
         uint32_t crc2NBO = htonl(crc2);
-        memcpy(buf + *len, &crc2NBO, sizeof(uint32_t));
         // on rajoute le crc2
+        memcpy(buf + *len, &crc2NBO, sizeof(uint32_t));
 
         // on augmente la taille
         *len += sizeof(uint32_t);
-        fprintf(stderr, "total size - crc2 : %zu\n", *len);
 
     }
     return PKT_OK;
