@@ -10,7 +10,7 @@ CMakeLists.txt
 # Generated exe from makefile
 receiver
 sender
-
+testsScript
 
 # Modules src
 modules/src
