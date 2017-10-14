@@ -6,8 +6,7 @@
 #include <zlib.h> //crc32
 
 pkt_t *pkt_new() {
-    return calloc(1,
-                  sizeof(pkt_t));
+    return calloc(1, sizeof(pkt_t));
 }
 
 void pkt_del(pkt_t *pkt) {
@@ -22,59 +21,117 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
 
     if (len < sizeof(struct header)) return E_NOHEADER; //Pas assez de Bytes pour former un header
 
-    struct header structheader;
+    int nbrBytesLus = 0;
+    struct bitFields bitFields;
+    uint32_t crc1FromData;
+    uint32_t crc1Calculated = (uint32_t) crc32(0L, Z_NULL, 0); // init du crc1
 
-    memcpy(&structheader, data, sizeof(struct header)); //Copie des 12 premiers bytes, qui formeront la structure header
+    // lecture des bitFields
+
+    memcpy(&bitFields, data, sizeof(struct bitFields));
+    nbrBytesLus += sizeof(struct bitFields);
 
     /*- Verification des donnees et ajout de celles-ci dans le paquet -*/
 
-    packetStatusCode = pkt_set_type(pkt, (const ptypes_t) structheader.bitFields.type);
+    packetStatusCode = pkt_set_type(pkt, (const ptypes_t) bitFields.type);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_tr(pkt, (const uint8_t) structheader.bitFields.trFlag);
+    packetStatusCode = pkt_set_tr(pkt, (const uint8_t) bitFields.trFlag);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_window(pkt, (const uint8_t) structheader.bitFields.window);
+    packetStatusCode = pkt_set_window(pkt, (const uint8_t) bitFields.window);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_seqnum(pkt, structheader.seqNum);
+    // calcul du crc1
+    // pour se faire, temporairement set de flag à 0
+
+    // ajout des bitfields dans le crc1 , avec le tr à 0
+    uint8_t bitfieldsForCRC = (pkt_get_type(pkt) << 6) | (0 << 5) | (pkt_get_window(pkt));
+    crc1Calculated = (uint32_t) crc32(crc1Calculated, (const Bytef *) &(bitfieldsForCRC), sizeof(uint8_t));
+
+    // lecture du numéro de séquence
+    uint8_t seqNum;
+    memcpy(&seqNum, data + nbrBytesLus, sizeof(uint8_t));
+    nbrBytesLus += sizeof(uint8_t);
+
+    packetStatusCode = pkt_set_seqnum(pkt, (const uint8_t) seqNum);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    uint16_t length = ntohs(structheader.length);
+    // ajout du seqNum dans le crc1
+    crc1Calculated = (uint32_t) crc32(crc1Calculated, (const Bytef *) &seqNum, sizeof(uint8_t));
 
-    packetStatusCode = pkt_set_length(pkt, length);
+    // lecture de la length
+    uint16_t length;
+    memcpy(&length, data + nbrBytesLus, sizeof(uint16_t));
+    nbrBytesLus += sizeof(uint16_t);
+
+    // on save la length qui a été htons;
+    uint16_t length_network = length;
+
+    // on convertit en byte order de notre machine
+    length = ntohs(length);
+
+    packetStatusCode = pkt_set_length(pkt, (const uint16_t) length);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    packetStatusCode = pkt_set_timestamp(pkt, structheader.timestamp);
+    // ajout de length dans le crc1
+    crc1Calculated = (uint32_t) crc32(crc1Calculated, (const Bytef *) &length_network, sizeof(uint16_t));
+
+    // lecture du timestamp
+    uint32_t timestamp;
+    memcpy(&timestamp, data + nbrBytesLus, sizeof(uint32_t));
+    nbrBytesLus += sizeof(uint32_t);
+
+    packetStatusCode = pkt_set_timestamp(pkt, (const uint32_t) timestamp);
+
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-    uint32_t crc1 = ntohl(structheader.CRC1);
+    // ajout de timestamp dans le crc1
+    crc1Calculated = (uint32_t) crc32(crc1Calculated, (const Bytef *) &timestamp, sizeof(uint32_t));
 
-    packetStatusCode = pkt_set_crc1(pkt, crc1);
+    // Phase critique 1 : check du CRC1
+
+    // lecture du crc1 de data
+    memcpy(&crc1FromData, data + nbrBytesLus, sizeof(uint32_t));
+    nbrBytesLus += sizeof(uint32_t);
+    crc1FromData = ntohl(crc1FromData); // en byte order de notre machine
+
+    // check du crc1
+    if ( crc1FromData != crc1Calculated ) return E_CRC;
+
+    packetStatusCode = pkt_set_crc1(pkt, (const uint32_t) crc1Calculated);
     if (packetStatusCode != PKT_OK) return packetStatusCode;
 
     /*- Le cas du payload -*/
 
     if (length > 0 && pkt_get_tr(pkt) == 0) {
 
-        if (len < (size_t) (12 + length))
+        if ( len < (size_t)(nbrBytesLus + length))
             return E_UNCONSISTENT; //La longueur annoncee par length n'est pas pas disponible dans data
 
-        const char *payload;
+        // on déclare notre payload
+        char payload[length];
 
-        memcpy(&payload, data + 12, length); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
-
+        memcpy(&payload, data + nbrBytesLus, length); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
+        nbrBytesLus += length;
         packetStatusCode = pkt_set_payload(pkt, payload, length);
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
 
-        if (len < (size_t) (12 + length + 4)) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
+        if ( len < (size_t)(nbrBytesLus + sizeof(uint32_t))) return E_UNCONSISTENT; //Pas assez de bytes pour le CRC2
 
         uint32_t CRC2;
 
-        memcpy(&CRC2, data + 12 + length, 4); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
+        memcpy(&CRC2, data + nbrBytesLus,
+               sizeof(uint32_t)); //Copie des pkt_get_length(pkt) bytes qui formeront le payload
 
-        packetStatusCode = pkt_set_crc2(pkt, ntohl(CRC2));
+        // calcul du crc2
+        uint32_t crc2Calculated = (uint32_t) crc32(0L, Z_NULL, 0); // init du crc2
+
+        CRC2 = ntohl(CRC2); // on convertit pour avoir la valeur en byte order de notre machine
+        crc2Calculated = (uint32_t) crc32(crc2Calculated, (const Bytef *) &payload, length);
+
+        packetStatusCode = pkt_set_crc2(pkt, CRC2);
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
     }
