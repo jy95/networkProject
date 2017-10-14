@@ -5,53 +5,53 @@
 #include <stdlib.h>
 #include "packet_stack.h"
 
-void addElem(stack *stack, pkt_t *p) {
-    node_t *elem = malloc(sizeof(*elem));
-    if (stack == NULL || elem == NULL) {
+void addElem(struct stack *Stack, pkt_t *p) {
+    struct node *elem = malloc(sizeof(*elem));
+    if (Stack == NULL || elem == NULL) {
         exit(EXIT_FAILURE);
     }
 
     elem->p = p;
-    elem->next = stack->head;
-    stack->head = elem;
+    elem->next = Stack->head;
+    Stack->head = elem;
 }
 
-pkt_t *removeElem(stack *stack) {
-    if (stack == NULL) {
+pkt_t *removeElem(struct stack *Stack) {
+    if (Stack == NULL) {
         exit(EXIT_FAILURE);
     }
 
     pkt_t *p = NULL;
 
-    if (isEmpty(stack) == 0) {
-        node_t *first = stack->head;
+    if (isEmpty(Stack) == 0) {
+        struct node *first = Stack->head;
         p = first->p;
-        stack->head = first->next;
+        Stack->head = first->next;
         free(first);
     }
 
     return p;
 }
 
-int isEmpty(stack *stack) {
-    if (stack == NULL || stack->head == NULL) return 1;
+int isEmpty(struct stack *Stack) {
+    if (Stack == NULL || Stack->head == NULL) return 1;
     return 0;
 }
 
-pkt_t *first(stack *stack) {
-    if (stack == NULL || stack->head == NULL) return NULL;
-    return stack->head->p;
+pkt_t *first(struct stack *Stack) {
+    if (Stack == NULL || Stack->head == NULL) return NULL;
+    return Stack->head->p;
 }
 
-int isPresent(stack *stack, pkt_t *p) {
-    if (stack->head == NULL) return 0;
-    node_t *node = stack->head;
-    while (node != NULL) {
-        if (node->p == p) {
+int isPresent(struct stack *Stack, pkt_t *p) {
+    if (Stack->head == NULL) return 0;
+    struct node *structnode = Stack->head;
+    while (structnode != NULL) {
+        if (structnode->p == p) {
             return 1;
         }
 
-        node = node->next;
+        structnode = structnode->next;
     }
     return 0;
 }

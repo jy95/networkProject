@@ -16,7 +16,7 @@
 
 typedef struct window_util {
     int lastReceivedSeqNum; //On stocke le dernier numero de sequence reçu
-    stack *storedPackets; //On stocke tous les packets reçus
+    struct stack *storedPackets; //On stocke tous les packets reçus
     uint8_t window; //On stocke le window du client
 } window_util_t;
 
