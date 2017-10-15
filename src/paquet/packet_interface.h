@@ -26,7 +26,7 @@ typedef struct __attribute__((__packed__)) pkt {
 } pkt_t;
 
 /* Raccourci pour struct pkt */
-typedef struct pkt pkt_t;
+//typedef struct pkt pkt_t;
 
 /* Types de paquets */
 typedef enum {
