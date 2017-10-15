@@ -2,7 +2,7 @@
 // Created by Alexandre Dewit on 15/10/17.
 //
 
-#include "../paquet/packet_interface.h"
+#include "packet_table.h"
 
 void addElem(pkt_t **packets, pkt_t *p) {
     packets[p->structheader.seqNum] = p;

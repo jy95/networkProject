@@ -1,5 +1,5 @@
 #include <getopt.h>
-#include "client.h"
+#include "common.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

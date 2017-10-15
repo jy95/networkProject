@@ -1,15 +1,4 @@
-#include <stdio.h>  /* FILE */
-#include <stdlib.h> // malloc , etc
-#include <netinet6/in6.h>
-#include <arpa/inet.h>
-#include <memory.h>
-#include "../client/client.h"
-#include "../sendAndReceiveData/real_address.h"
-#include "../sendAndReceiveData/create_socket.h"
-#include "../sendAndReceiveData/read_write_loop.h"
-#include "../paquet/packet_interface.h"
-
-#define BUFFER_MAX_SIZE 528
+#include "server.h"
 
 int main(int argc, char *argv[]) {
     option_t *option_arg = get_option_arg(argc, argv); //On ajoute dans la structure les infos de la ligne de commande
@@ -45,9 +34,9 @@ int main(int argc, char *argv[]) {
     ssize_t n = 0;
 
     char buffer[BUFFER_MAX_SIZE];
-    int fromsize = sizeof rval;
+    socklen_t fromsize = sizeof rval;
 
-    if ((n = recvfrom(socketFileDescriptor, buffer, BUFFER_MAX_SIZE, 0, &rval, (socklen_t *) &fromsize)) < 0) {
+    if ((n = recvfrom(socketFileDescriptor, buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) &rval, &fromsize)) < 0 ) {
         fprintf(stderr, "Nothing to receive"); //On a rien reçu
         return EXIT_FAILURE;
     }
@@ -62,7 +51,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    if (sendto(socketFileDescriptor, buffer, strlen(buffer), 0, &rval, (socklen_t) fromsize) < 0) {
+    if ( sendto(socketFileDescriptor, buffer, strlen(buffer), 0, (struct sockaddr *) &rval, fromsize) < 0 ) {
         fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
         return EXIT_FAILURE;
     }

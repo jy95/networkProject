@@ -276,7 +276,7 @@ pkt_status_code pkt_set_tr(pkt_t *p, const uint8_t tr) {
 }
 
 pkt_status_code pkt_set_window(pkt_t *p, const uint8_t window) {
-    if (window > MAX_WINDOW_SIZE || window < 1) return E_WINDOW;
+    if ( window > MAX_PACKET_WINDOW_SIZE || window < 1 ) return E_WINDOW;
 
     (p->structheader).bitFields.window = window;
 

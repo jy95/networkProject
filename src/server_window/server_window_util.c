@@ -25,7 +25,7 @@ window_util_t *new_window_util() {
 
 void del_window_util(window_util_t *windowUtil) {
     uint8_t i = 0;
-    while (i != 256) {
+    while (i != (uint8_t) 256) {
         if ((windowUtil->storedPackets)[i] != NULL) {
             free((windowUtil->storedPackets)[i]);
         }

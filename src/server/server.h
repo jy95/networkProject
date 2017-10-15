@@ -1,0 +1,23 @@
+//
+// Created by jy95 on 15/10/2017.
+//
+
+#ifndef PROJECT_SERVER_H
+#define PROJECT_SERVER_H
+
+#define BUFFER_MAX_SIZE 528
+
+#include <arpa/inet.h>
+#include <memory.h>
+#include <stdio.h>  /* FILE */
+#include <stdlib.h> // malloc , etc
+#include <sys/types.h>
+#include <sys/socket.h>
+#include "../client/client.h"
+#include "../sendAndReceiveData/real_address.h"
+#include "../sendAndReceiveData/create_socket.h"
+#include "../sendAndReceiveData/read_write_loop.h"
+#include "../paquet/packet_interface.h"
+//#include <netinet6/in6.h> // pas compatible ici
+
+#endif //PROJECT_SERVER_H
