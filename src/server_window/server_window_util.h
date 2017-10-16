@@ -148,5 +148,19 @@ unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum);
  */
 pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p);
 
+/**
+ *
+ * @param windowUtil
+ * @return la window du serveur
+ */
+int get_window_server(window_util_t *windowUtil);
+
+/**
+ *
+ * @param windowUtil
+ * @param size
+ * @return
+ */
+void set_window_server(window_util_t *windowUtil, uint8_t size);
 
 #endif //PROJECT_SERVER_WINDOW_UTIL_H

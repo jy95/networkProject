@@ -6,7 +6,6 @@
 
 window_util_t *new_window_util() {
     window_util_t *windowUtil = malloc(sizeof(window_util_t));
-
     if (windowUtil == NULL) return NULL;
 
     windowUtil->window_server = MAX_WINDOW_SIZE;
@@ -24,6 +23,14 @@ int get_lastReceivedSeqNum(window_util_t *windowUtil) {
 
 int get_window(window_util_t *windowUtil) {
     return windowUtil->window;
+}
+
+int get_window_server(window_util_t *windowUtil) {
+    return windowUtil->window_server;
+}
+
+void set_window_server(window_util_t *windowUtil, uint8_t size) {
+    windowUtil->window_server = size;
 }
 
 int set_lastReceivedSeqNum(window_util_t *windowUtil, int lastReceivedSeqNum) {

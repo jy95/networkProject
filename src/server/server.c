@@ -1,4 +1,6 @@
 #include "server.h"
+#include "../sendAndReceiveData/wait_for_client.h"
+#include "../server_window/server_window_util.h"
 
 int main(int argc, char *argv[]) {
     option_t *option_arg = get_option_arg(argc, argv); //On ajoute dans la structure les infos de la ligne de commande
@@ -26,9 +28,6 @@ int main(int argc, char *argv[]) {
     if ((socketFileDescriptor = create_socket(&rval, option_arg->port, NULL, -1)) < 0)
         return EXIT_FAILURE; //On bind le serveur au client
 
-    // 1) Wait for client
-    // 2) Read write loop
-
     fprintf(stdout, "Socket successfully bind - listening to port %d\n", option_arg->port);
 
     ssize_t n = 0;
@@ -36,30 +35,144 @@ int main(int argc, char *argv[]) {
     char buffer[MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE];
     socklen_t fromsize = sizeof rval;
 
-    if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0, (struct sockaddr *) &rval, &fromsize)) < 0 ) {
-        fprintf(stderr, "Nothing to receive"); //On a rien reçu
-        return EXIT_FAILURE;
+    int lengthReceivedPacket = 1;
+    int seqnumPacket = -1;
+    int lastSeqAck = -1;
+    uint32_t timestamp = 0;
+
+    window_util_t *windowUtil = new_window_util();
+
+    if (windowUtil == NULL) return EXIT_FAILURE;
+
+    while (lengthReceivedPacket != 0 || seqnumPacket != lastSeqAck) {
+
+        lastSeqAck = seqnumPacket;
+
+        if (wait_for_client(socketFileDescriptor) == -1) {       //Connexion a un client
+            fprintf(stderr, "failed to wait for client");
+            return EXIT_FAILURE;
+        }
+
+        //Recuperation des donnees
+
+        if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0,
+                          (struct sockaddr *) &rval, &fromsize)) < 0) {
+            fprintf(stderr, "Nothing to receive"); //On a rien reçu
+            return EXIT_FAILURE;
+        }
+
+        // Recuperation du paquet
+
+        pkt_t *p = pkt_new();
+
+        if (p == NULL) return EXIT_FAILURE;
+
+        int isIgnore = 0;
+
+        // on decode le buffer
+        if (pkt_decode(buffer, (const size_t) n, p) != PKT_OK) {
+            fprintf(stderr, "Could not decode the packet"); //Erreur lors de la conversion du buffer en paquet
+            isIgnore = 1;
+        }
+
+        //Traitement du paquet
+
+        lengthReceivedPacket = pkt_get_length(p);
+        seqnumPacket = pkt_get_seqnum(p);
+
+        int test1 = (lengthReceivedPacket >= 1 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
+        int test2 = isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1; //On est dans la sliding window
+
+        // Le paquet n'est pas ignore + seqnumPacket != lastSeqAck + 1 <= length <= 512 + paquet = DATA
+        if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
+            set_window(windowUtil, pkt_get_window(p)); //On recupere la taille de la window du client
+
+            //Bon type de paquet mais tronque
+            if (pkt_get_tr(p) == 1) {
+
+                // Creation du nouveau paquet
+
+                pkt_t *newPkt = pkt_new();
+                if (newPkt == NULL) return EXIT_FAILURE;
+
+                pkt_set_type(newPkt, PTYPE_NACK);
+                pkt_set_tr(newPkt, 1);
+                pkt_set_seqnum(newPkt, pkt_get_seqnum(p));
+                pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
+                pkt_set_timestamp(newPkt, timestamp);
+
+                char buff[lengthReceivedPacket];
+
+                size_t len = 0;
+
+                // On encode la nouveau paquet
+
+                pkt_status_code err;
+                if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
+                    fprintf(stderr, "encode error %d :", err);
+                    return EXIT_FAILURE;
+                }
+
+                // On envoie le paquet au client
+
+                if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
+                    fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
+                    return EXIT_FAILURE;
+                }
+
+                //Bon type de paquet et pas tronque
+            } else if (pkt_get_tr(p) == 0) {
+
+                //On cree le nouveau paquet
+
+                pkt_t *newPkt = pkt_new();
+                if (newPkt == NULL) return EXIT_FAILURE;
+
+                if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
+                    set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
+                    //TODO Si les paquets suivants on deja ete stocke, alors on les sort aussi
+                    // Ecrire le tout sur la sortie standard
+                } else {
+                    add_window_packet(windowUtil, p); //On stocke le paquet au frais
+                }
+
+                timestamp = pkt_get_timestamp(p);
+
+                pkt_set_type(newPkt, PTYPE_ACK);
+                pkt_set_tr(newPkt, 0);
+                pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) % MAX_STORED_PACKAGES));
+                pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
+                pkt_set_timestamp(newPkt, timestamp);
+
+                // On encode la nouveau paquet
+
+
+                char buff[lengthReceivedPacket];
+                size_t len = 0;
+
+
+                pkt_status_code err;
+                if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
+                    fprintf(stderr, "encode error %d :", err);
+                    return EXIT_FAILURE;
+                }
+
+                // On envoie le paquet au client
+
+                if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
+                    fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
+                    return EXIT_FAILURE;
+                }
+            }
+
+        }
+
+        pkt_del(p);
+        free(p);
+
     }
 
-    pkt_t *p = pkt_new();
-
-    if(p == NULL) return EXIT_FAILURE;
-
-    if(pkt_decode(buffer, (const size_t) n, p) != PKT_OK) {
-        fprintf(stderr, "Could not decode the packet"); //Erreur lors de la conversion du buffer en paquet
-        return EXIT_FAILURE;
-    }
-
-
-    if ( sendto(socketFileDescriptor, buffer, strlen(buffer), 0, (struct sockaddr *) &rval, fromsize) < 0 ) {
-        fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
-        return EXIT_FAILURE;
-    }
-
-
-    // Step : Envoi de message
-
-    read_write_loop(socketFileDescriptor);
+    del_window_util(windowUtil);
 
     return EXIT_SUCCESS;
 }
