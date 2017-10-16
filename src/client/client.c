@@ -39,17 +39,19 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "Socket successfully created - listenning to port %d\n", option_arg->port);
 
-    int RTT; // en ms
+    networkInfo receiverInfo;
 
     // Step : Calculer le RTT initial pour envoyer un packet (en théorie, doit être recalculé à chaque réception de (N)ACK)
-    if ((RTT = estimateRTT(socketFileDescriptor, rval)) == -1 ) {
+    if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1 ) {
+        fprintf(stdout, "Cannot estimate RTT and Window size of receiver\n");
         return EXIT_FAILURE;
     }
 
-    fprintf(stdout, "Initial calculated RTT : %d ms \n", RTT);
+    fprintf(stdout, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
+    fprintf(stdout, "Initial window size of receiver : %d ms \n", receiverInfo.windowsReceiver);
 
     // Step : Envoi de message
-
+    // TODO
     read_write_loop(socketFileDescriptor);
 
     // si on a ouvert le fp

@@ -19,14 +19,19 @@
 #include "../common/common.h"
 
 #define MAX_LATENCE_TIME    2000 // le temps maximal
-#define EXPECTED_LATENCE_RATE  10   // un pourcentage arbitraire pour évaluer délai/latence/le temps de traitement
-#define INCREASE_SEARCH_RTT 20  // un nombre pour augmenter la recherche du RTT
 #define MAX_PAYLOAD_SIZE    512  // la taille MAX du payload
 
+// structure pour le calcul de RTT
+typedef struct networkInfo {
+    int RTT; // le RTT en ms
+    int windowsReceiver; // la taille de la window du receiver
+} networkInfo;
 
-// pour estimer le RTT
-// renvoit le temps en ms qu'il a trouvé
-// -1 en cas d'erreur
-int estimateRTT(int sfd, struct sockaddr_in6 dest);
+// pour estimer le RTT et la taille de la window
+// -1 en cas d'erreur ; sinon 0
+int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo);
+
+// retour la valeur arrrondi en ms de la différence
+int getDiffTimeInMs(time_t * start, time_t * end);
 
 #endif //PROJECT_CLIENT_H

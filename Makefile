@@ -12,6 +12,7 @@ CFLAGS += -fstack-protector-all # Add canary code to detect stack smashing
 LDFLAGS += -rdynamic
 LDFLAGS += -lz
 LDFLAGS += -lcunit
+LDFLAGS += -lm
 
 # external libs
 # par défaut les chemins classiques
