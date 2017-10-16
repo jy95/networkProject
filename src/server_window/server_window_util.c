@@ -9,30 +9,12 @@ window_util_t *new_window_util() {
 
     if (windowUtil == NULL) return NULL;
 
-    windowUtil->storedPackets = malloc(sizeof(pkt_t) * MAX_STORED_PACKAGES);
-
-    windowUtil->seqAck = (unsigned int *) calloc(256, sizeof(unsigned int));
-
-    if (windowUtil->seqAck == NULL || windowUtil->storedPackets == NULL) {
-        free(windowUtil);
-        return NULL;
-    }
-
     windowUtil->window_server = MAX_WINDOW_SIZE;
     windowUtil->lastReceivedSeqNum = -1;
     return windowUtil;
 }
 
 void del_window_util(window_util_t *windowUtil) {
-    uint8_t i = 0;
-    while (i != (uint8_t) 256) {
-        if ((windowUtil->storedPackets)[i] != NULL) {
-            free((windowUtil->storedPackets)[i]);
-        }
-        i++;
-    }
-    free(windowUtil->storedPackets);
-    free(windowUtil->seqAck);
     free(windowUtil);
 }
 
@@ -63,7 +45,7 @@ void unset_seqAck(window_util_t *windowUtil, uint8_t seqnum) {
 }
 
 int set_window(window_util_t *windowUtil, uint8_t window) {
-    if (windowUtil == NULL || window > 31) return -1;
+    if (windowUtil == NULL || window > MAX_WINDOW_SIZE) return -1;
     windowUtil->window = window;
     return 0;
 }
@@ -82,29 +64,30 @@ pkt_t *remove_window_packet(window_util_t *windowUtil, uint8_t seqnum) {
 unsigned int isPresent_seqnum_window(window_util_t *windowUtil, uint8_t seqnum) {
     int lastSeqNum = get_lastReceivedSeqNum(windowUtil);
     int endSlidingWindow = lastSeqNum + get_window(windowUtil);
-    if (((seqnum < lastSeqNum + 1 ||
-          seqnum > (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES) &&
-         endSlidingWindow - lastSeqNum + 1 > 0)
-        ||
-        (((seqnum < lastSeqNum + 1 &&
-           seqnum > (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES)) &&
-         endSlidingWindow - lastSeqNum + 1 < 0)) { //Nous ne sommes pas dans la sliding window
+    int EndIntervalWindow = (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES;
+
+    int test1 = seqnum < lastSeqNum + 1 || seqnum > EndIntervalWindow; // Hors de la window
+    int test2 = EndIntervalWindow - lastSeqNum + 1 > 0; //Cas normal : window ne chevauche pas le tableau
+    int test3 = seqnum < lastSeqNum + 1 && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
+    int test4 = endSlidingWindow - lastSeqNum + 1 < 0; // La window chevauche
+
+    if ((test1 && test2) || (test3 && test4)) { //Nous ne sommes pas dans la sliding window
         return 0;
     }
-    unsigned int *seqAck = get_seqAck(windowUtil);
-    return seqAck[seqnum];
+    return (windowUtil->seqAck)[seqnum];
 }
 
 unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum) {
     int lastSeqNum = get_lastReceivedSeqNum(windowUtil);
     int endSlidingWindow = lastSeqNum + get_window(windowUtil);
-    if (((seqnum < lastSeqNum + 1 ||
-          seqnum > (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES) &&
-         endSlidingWindow - lastSeqNum + 1 > 0)
-        ||
-        (((seqnum < lastSeqNum + 1 &&
-           seqnum > (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES)) &&
-         endSlidingWindow - lastSeqNum + 1 < 0)) { //Nous ne sommes pas dans la sliding window
+    int EndIntervalWindow = (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES;
+
+    int test1 = seqnum < lastSeqNum + 1 || seqnum > EndIntervalWindow; // Hors de la window
+    int test2 = EndIntervalWindow - lastSeqNum + 1 > 0; //Cas normal : window ne chevauche pas le tableau
+    int test3 = seqnum < lastSeqNum + 1 && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
+    int test4 = endSlidingWindow - lastSeqNum + 1 < 0; // La window chevauche
+
+    if ((test1 && test2) || (test3 && test4)) { //Nous ne sommes pas dans la sliding window
         return 0;
     }
 
@@ -113,10 +96,11 @@ unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum) {
 
 pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
     uint8_t seqnum = pkt_get_seqnum(p);
+
     int lastValideSeqnum = get_lastReceivedSeqNum(windowUtil);
 
     //Nous ne sommes pas dans la sliding window
-    if(isInSlidingWindow(windowUtil, seqnum) == 0) {
+    if (isInSlidingWindow(windowUtil, seqnum) == 0) {
         return NULL;
     }
 
@@ -125,7 +109,7 @@ pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
         // on évite le cas de base ou il n'y a pas encore eu de seqnum valide reçu
         if (lastValideSeqnum != -1) {
             if (isPresent_seqnum_window(windowUtil, seqnum) == 0) {
-                addElem(windowUtil->storedPackets, p);
+                windowUtil->storedPackets[seqnum] = p;
                 set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
             }
 
@@ -144,9 +128,9 @@ pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
     }
 
     //Le seqnum n'est pas encore present
-    if(isPresent_seqnum_window(windowUtil, seqnum) == 0) {
+    if (isPresent_seqnum_window(windowUtil, seqnum) == 0) {
         set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
-        addElem(windowUtil->storedPackets, p);
+        windowUtil->storedPackets[seqnum] = p;
         return NULL;
     }
 

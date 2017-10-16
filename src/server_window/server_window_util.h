@@ -20,10 +20,10 @@
 
 typedef struct window_util {
     int lastReceivedSeqNum; //On stocke le dernier numero de sequence valide reçu
-    pkt_t ** storedPackets; //On stocke tous les packets reçu
+    pkt_t *storedPackets[256]; //On stocke tous les packets reçu
     uint8_t window_server; //On stocke le window du serveur
     uint8_t window; //On stocke le window du client
-    unsigned int *seqAck;
+    unsigned int seqAck[256];
 } window_util_t;
 
 /**
