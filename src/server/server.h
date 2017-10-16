@@ -5,7 +5,9 @@
 #ifndef PROJECT_SERVER_H
 #define PROJECT_SERVER_H
 
-#define BUFFER_MAX_SIZE 528
+#define BUFFER_MAX_SIZE 31
+#define MAX_WINDOW_SIZE 32
+
 
 #include <arpa/inet.h>
 #include <memory.h>

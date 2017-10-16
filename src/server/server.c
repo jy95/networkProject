@@ -33,10 +33,10 @@ int main(int argc, char *argv[]) {
 
     ssize_t n = 0;
 
-    char buffer[BUFFER_MAX_SIZE];
+    char buffer[MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE];
     socklen_t fromsize = sizeof rval;
 
-    if ((n = recvfrom(socketFileDescriptor, buffer, BUFFER_MAX_SIZE, 0, (struct sockaddr *) &rval, &fromsize)) < 0 ) {
+    if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0, (struct sockaddr *) &rval, &fromsize)) < 0 ) {
         fprintf(stderr, "Nothing to receive"); //On a rien reçu
         return EXIT_FAILURE;
     }
