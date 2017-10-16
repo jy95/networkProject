@@ -88,7 +88,7 @@ receiver: $(RECEIVER_SRC); \
 tests: $(TESTS_SRC); \
 		$(CC) $(CFLAGS) $^ $(LDFLAGS) -o testsScript;
 
-.PHONY: clean
+.PHONY: all clean tests
 
 clean:
 	@rm -f $(ALL_OBJ) sender receiver testsScript
