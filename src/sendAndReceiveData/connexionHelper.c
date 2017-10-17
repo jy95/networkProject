@@ -129,66 +129,62 @@ void read_write_loop(int sfd) {
     ufds[0].fd = stdinFd;
     ufds[0].events = POLLIN; // check for just normal data
 
-    // lire et écrire sur sfd
+    // lire sfd
     ufds[1].fd = sfd;
     ufds[1].events = POLLIN;
 
-    // espions pour lecture
-    result = poll(ufds, 2, -1);
+    // écrire sur stdout ; pas utile ici
+    //ufds[2].fd = stdoutFd;
+    //ufds[2].events = POLLOUT;
 
-    if ( result == -1 ) {
-        int errnum = errno;
-        fprintf(stderr, "Error : %s\n", strerror(errnum));
-    } else if ( result == 0 ) {
-        // timer expiré : ne rien faire
-    } else {
+    // poll à l'infini
+    while (1) {
+        result = poll(ufds, 2, -1);
 
-        char buf[BUFFER_LENGTH];
+        if ( result == -1 ) {
+            int errnum = errno;
+            fprintf(stderr, "Error : %s\n", strerror(errnum));
+            // on break ici
+            return;
 
-        // Des données sont disponibles sur stdin
-        if ( ufds[0].revents & POLLIN ) {
+        } else if ( ufds[0].revents & POLLIN ) {
+            // Des données sont disponibles sur stdin
+            char buf[BUFFER_LENGTH];
+            ssize_t count;
 
             // on s'assure que ce buffer est vide
             memset(buf, 0, BUFFER_LENGTH);
 
             // lecture réussie
-            if ( read(stdinFd, buf, BUFFER_LENGTH) >= 0 ) {
-                // On s'assure qu'il y ait bien un \0 à la fin
-                int bufferLength = strlen(buf) - 1;
-                if (buf[bufferLength] == '\n')
-                    buf[bufferLength] = '\0';
-
-                // on envoit tout cela à la socket
-                if ( write(sfd, buf, bufferLength + 1) < 0 ) {
-                    fprintf(stderr, "Cannot write message to socket\n");
-                }
-            } else {
-                fprintf(stderr, "Cannot read STDIN\n");
+            if ((count = read(stdinFd, buf, BUFFER_LENGTH)) == -1 ) {
+                fprintf(stderr, "Cannot read inside poll\n");
+                return;
             }
 
-        }
+            // on envoit tout cela à la socket
+            if ( write(sfd, buf, count) == -1 ) {
+                fprintf(stderr, "Cannot write message to socket\n");
+                return;
+            }
 
-        // Des données sont disponibles sur la socket
-        if ( ufds[1].revents & POLLIN ) {
+        } else if ( ufds[1].revents & POLLIN ) {
+            // Des données sont disponibles sur la socket
+            char buf[BUFFER_LENGTH];
+            ssize_t count;
 
             // on s'assure que ce buffer est vide
             memset(buf, 0, BUFFER_LENGTH);
 
             // lecture réussie
-            if ( read(sfd, buf, BUFFER_LENGTH) >= 0 ) {
+            if ((count = read(sfd, buf, BUFFER_LENGTH)) == -1 ) {
+                fprintf(stderr, "Cannot read inside poll\n");
+                return;
+            }
 
-                // On s'assure qu'il y ait bien un \0 à la fin
-                int bufferLength = strlen(buf) - 1;
-                if (buf[bufferLength] == '\n')
-                    buf[bufferLength] = '\0';
-
-                // On envoit tout cela sur STDOUT (FD : 1)
-                if ( write(stdoutFd, buf, BUFFER_LENGTH) < 0 ) {
-                    fprintf(stderr, "Cannot write message to socket\n");
-                }
-
-            } else {
-                fprintf(stderr, "Cannot read socket\n");
+            // on envoit tout cela à stdout
+            if ( write(stdoutFd, buf, count) == -1 ) {
+                fprintf(stderr, "Cannot write message to stdout\n");
+                return;
             }
         }
     }
@@ -196,11 +192,16 @@ void read_write_loop(int sfd) {
 
 int wait_for_client(int sfd) {
 
+    char buf[BUFFER_LENGTH];
+
+    // On s'assure qu'il sera vide
+    memset(buf, 0, BUFFER_LENGTH);
+
     struct sockaddr_in6 senderAddress;
     socklen_t fromlen = sizeof(senderAddress);
 
     // flags à 0 : on veut du bloquant
-    if ( recvfrom(sfd, NULL, 0, MSG_PEEK, (struct sockaddr *) &senderAddress, &fromlen) == -1 ) {
+    if ( recvfrom(sfd, buf, BUFFER_LENGTH, MSG_PEEK, (struct sockaddr *) &senderAddress, &fromlen) == -1 ) {
         fprintf(stderr, "Cannot recvfrom with socket\n");
         return -1;
     } else {
