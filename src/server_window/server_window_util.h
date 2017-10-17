@@ -153,7 +153,7 @@ pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p);
  * @param windowUtil
  * @return la window du serveur
  */
-int get_window_server(window_util_t *windowUtil);
+uint8_t get_window_server(window_util_t *windowUtil);
 
 /**
  *
@@ -162,5 +162,23 @@ int get_window_server(window_util_t *windowUtil);
  * @return
  */
 void set_window_server(window_util_t *windowUtil, uint8_t size);
+
+/**
+ * Permet d'afficher tous les paquets dont le numero de sequence se trouve dans la window et qui dont leur paquet
+ * respectif sont stocke. Il faut que les numero de sequence se suivent et que le premier numero de sequence est
+ * lui aussi valide
+ * @param windowUtil
+ * @param le premier paquet valide suivant le dernier numero de sequence valide
+ * @return le dernier numero de sequence print
+ */
+void printer(window_util_t *windowUtil, pkt_t *first_pkt);
+
+/**
+ * Permet de savoir si le premier element de la window est deja sotcke ou non
+ * @param windowUtil
+ * @return 1 si present, 0 sinon
+ */
+int get_first_value_window(window_util_t* windowUtil);
+
 
 #endif //PROJECT_SERVER_WINDOW_UTIL_H

@@ -5,15 +5,14 @@
 int main(int argc, char *argv[]) {
     option_t *option_arg = get_option_arg(argc, argv); //On ajoute dans la structure les infos de la ligne de commande
     if (option_arg == NULL) return EXIT_FAILURE;
+    FILE *fp = NULL;
 
     if (option_arg->filename != NULL) {
-        FILE *fp;
-        if ((fp = fopen(option_arg->filename, "w+")) == NULL) {
-            fprintf(stderr, "Le fichier ne peut pas être lu\n");
+        if ((fp = freopen(option_arg->filename, "w", stdout)) == NULL) {
+            fprintf(stderr, "Le fichier ne peut pas être lue\n");
             return EXIT_FAILURE;
         }
-        // maintenant ce fichier doit devenir l'entrée standard
-        // dup2 avec STDIN
+
     }
 
     struct sockaddr_in6 rval;
@@ -21,14 +20,18 @@ int main(int argc, char *argv[]) {
     if ((message = real_address(option_arg->domaine, &rval)) !=
         NULL) { //On transforme l'addresse en structure lisible par la machine
         fprintf(stderr, "%s\n", message);
+        if (fp != NULL) fclose(fp);
+
         return EXIT_FAILURE;
     }
 
     int socketFileDescriptor;
-    if ((socketFileDescriptor = create_socket(&rval, option_arg->port, NULL, -1)) < 0)
+    if ((socketFileDescriptor = create_socket(&rval, option_arg->port, NULL, -1)) < 0) {
+        if (fp != NULL) fclose(fp);
         return EXIT_FAILURE; //On bind le serveur au client
+    }
 
-    fprintf(stdout, "Socket successfully bind - listening to port %d\n", option_arg->port);
+    fprintf(stderr, "Socket successfully bind - listening to port %d\n", option_arg->port);
 
     ssize_t n = 0;
 
@@ -38,11 +41,13 @@ int main(int argc, char *argv[]) {
     int lengthReceivedPacket = 1;
     int seqnumPacket = -1;
     int lastSeqAck = -1;
-    uint32_t timestamp = 0;
 
     window_util_t *windowUtil = new_window_util();
 
-    if (windowUtil == NULL) return EXIT_FAILURE;
+    if (windowUtil == NULL) {
+        if (fp != NULL) fclose(fp);
+        return EXIT_FAILURE;
+    }
 
     while (lengthReceivedPacket != 0 || seqnumPacket != lastSeqAck) {
 
@@ -50,6 +55,7 @@ int main(int argc, char *argv[]) {
 
         if (wait_for_client(socketFileDescriptor) == -1) {       //Connexion a un client
             fprintf(stderr, "failed to wait for client");
+            if (fp != NULL) fclose(fp);
             return EXIT_FAILURE;
         }
 
@@ -58,6 +64,7 @@ int main(int argc, char *argv[]) {
         if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0,
                           (struct sockaddr *) &rval, &fromsize)) < 0) {
             fprintf(stderr, "Nothing to receive"); //On a rien reçu
+            if (fp != NULL) fclose(fp);
             return EXIT_FAILURE;
         }
 
@@ -65,7 +72,10 @@ int main(int argc, char *argv[]) {
 
         pkt_t *p = pkt_new();
 
-        if (p == NULL) return EXIT_FAILURE;
+        if (p == NULL) {
+            if (fp != NULL) fclose(fp);
+            return EXIT_FAILURE;
+        }
 
         int isIgnore = 0;
 
@@ -93,13 +103,16 @@ int main(int argc, char *argv[]) {
                 // Creation du nouveau paquet
 
                 pkt_t *newPkt = pkt_new();
-                if (newPkt == NULL) return EXIT_FAILURE;
+                if (newPkt == NULL) {
+                    if (fp != NULL) fclose(fp);
+                    return EXIT_FAILURE;
+                }
 
                 pkt_set_type(newPkt, PTYPE_NACK);
                 pkt_set_tr(newPkt, 1);
                 pkt_set_seqnum(newPkt, pkt_get_seqnum(p));
                 pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
-                pkt_set_timestamp(newPkt, timestamp);
+                pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
 
                 char buff[lengthReceivedPacket];
 
@@ -110,6 +123,7 @@ int main(int argc, char *argv[]) {
                 pkt_status_code err;
                 if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
                     fprintf(stderr, "encode error %d :", err);
+                    if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
 
@@ -117,6 +131,7 @@ int main(int argc, char *argv[]) {
 
                 if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
                     fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
+                    if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
 
@@ -126,26 +141,29 @@ int main(int argc, char *argv[]) {
                 //On cree le nouveau paquet
 
                 pkt_t *newPkt = pkt_new();
-                if (newPkt == NULL) return EXIT_FAILURE;
+                if (newPkt == NULL) {
+                    if (fp != NULL) fclose(fp);
+                    return EXIT_FAILURE;
+                }
 
                 if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
                     set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
+                    printer(windowUtil,
+                            p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
+
                     //TODO Si les paquets suivants on deja ete stocke, alors on les sort aussi
                     // Ecrire le tout sur la sortie standard
                 } else {
                     add_window_packet(windowUtil, p); //On stocke le paquet au frais
                 }
 
-                timestamp = pkt_get_timestamp(p);
-
                 pkt_set_type(newPkt, PTYPE_ACK);
                 pkt_set_tr(newPkt, 0);
                 pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) % MAX_STORED_PACKAGES));
                 pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
-                pkt_set_timestamp(newPkt, timestamp);
+                pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
 
                 // On encode la nouveau paquet
-
 
                 char buff[lengthReceivedPacket];
                 size_t len = 0;
@@ -154,6 +172,7 @@ int main(int argc, char *argv[]) {
                 pkt_status_code err;
                 if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
                     fprintf(stderr, "encode error %d :", err);
+                    if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
 
@@ -161,6 +180,7 @@ int main(int argc, char *argv[]) {
 
                 if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
                     fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
+                    if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
             }
@@ -174,5 +194,6 @@ int main(int argc, char *argv[]) {
 
     del_window_util(windowUtil);
 
+    if (fp != NULL) fclose(fp);
     return EXIT_SUCCESS;
 }

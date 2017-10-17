@@ -2,6 +2,7 @@
 // Created by Alexandre Dewit on 14/10/17.
 //
 
+#include <stdio.h>
 #include "server_window_util.h"
 
 window_util_t *new_window_util() {
@@ -25,7 +26,7 @@ int get_window(window_util_t *windowUtil) {
     return windowUtil->window;
 }
 
-int get_window_server(window_util_t *windowUtil) {
+uint8_t get_window_server(window_util_t *windowUtil) {
     return windowUtil->window_server;
 }
 
@@ -55,6 +56,11 @@ int set_window(window_util_t *windowUtil, uint8_t window) {
     if (windowUtil == NULL || window > MAX_WINDOW_SIZE) return -1;
     windowUtil->window = window;
     return 0;
+}
+
+int get_first_value_window(window_util_t* windowUtil) {
+    if(get_window(windowUtil) == 0) return 0;
+    return (windowUtil->seqAck)[(get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES];
 }
 
 int add_window_packet(window_util_t *windowUtil, pkt_t *p) {
@@ -104,38 +110,19 @@ unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum) {
 pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
     uint8_t seqnum = pkt_get_seqnum(p);
 
-    int lastValideSeqnum = get_lastReceivedSeqNum(windowUtil);
+    if(get_window(windowUtil) == 0) return NULL;
+
 
     //Nous ne sommes pas dans la sliding window
     if (isInSlidingWindow(windowUtil, seqnum) == 0) {
         return NULL;
     }
 
-    // Si nous avons le seqnum qui suit le precedent, on decale la sliding window
-    if (seqnum == (uint8_t) (lastValideSeqnum + 1)) {
-        // on évite le cas de base ou il n'y a pas encore eu de seqnum valide reçu
-        if (lastValideSeqnum != -1) {
-            if (isPresent_seqnum_window(windowUtil, seqnum) == 0) {
-                windowUtil->storedPackets[seqnum] = p;
-                set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
-            }
-
-            unset_seqAck(windowUtil, seqnum); //On set a 0 la case numero seqnum - 1 de seqAck
-            set_lastReceivedSeqNum(windowUtil, seqnum);
-            return removeElem(windowUtil->storedPackets, (uint8_t) (seqnum - 1));
-
-        }
-
-        addElem(windowUtil->storedPackets, p);
-        set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
-        set_lastReceivedSeqNum(windowUtil, seqnum);
-        return NULL;                    //On retourne NULL car il n'y avait jamais eu de paquet valide avant
-
-
-    }
-
     //Le seqnum n'est pas encore present
     if (isPresent_seqnum_window(windowUtil, seqnum) == 0) {
+        uint8_t window_server = get_window_server(windowUtil);
+        window_server--;
+        set_window_server(windowUtil, window_server);
         set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
         windowUtil->storedPackets[seqnum] = p;
         return NULL;
@@ -143,5 +130,39 @@ pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
 
     //le seqnum est present et donc deja ajoute
     return NULL;
+}
+
+void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
+    uint8_t seqnum = pkt_get_seqnum(first_pkt);
+
+    if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnum && isInSlidingWindow(windowUtil, seqnum)) {
+
+        fprintf(stdout, "%s", pkt_get_payload(first_pkt));
+
+        set_lastReceivedSeqNum(windowUtil, seqnum);
+        unset_seqAck(windowUtil, seqnum);
+
+        seqnum = (uint8_t) ((seqnum + 1) % MAX_STORED_PACKAGES);
+
+        pkt_t * p;
+        // Tant qu'on est dans la window et que le premier numero de sequence est deja sotcke
+        while (isInSlidingWindow(windowUtil, seqnum) && get_first_value_window(windowUtil) == 1) {
+
+            p = removeElem(windowUtil->storedPackets, seqnum); // On retire l'element de la liste des paquets
+            fprintf(stdout, "%s", pkt_get_payload(p)); // on print le payload du paquet
+            set_lastReceivedSeqNum(windowUtil, seqnum); //On decale la window
+            unset_seqAck(windowUtil, seqnum); // On retire la presence du paquet dans la liste des numero de sequence valide
+            uint8_t window_server = get_window_server(windowUtil);
+            window_server++;
+
+            set_window_server(windowUtil, window_server);
+            seqnum = (uint8_t) ((seqnum + 1) % MAX_STORED_PACKAGES);
+
+            free(p);
+
+        }
+
+    }
+
 }
 
