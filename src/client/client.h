@@ -16,10 +16,12 @@
 #include <sys/fcntl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include "../paquet/packet_interface.h"
 #include "../common/common.h"
 
 #define MAX_LATENCE_TIME    2000 // le temps maximal
 #define MAX_PAYLOAD_SIZE    512  // la taille MAX du payload
+#define MAX_PACKET_RECEIVED_SIZE 530// la taille du
 
 // structure pour le calcul de RTT
 typedef struct networkInfo {
