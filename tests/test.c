@@ -52,7 +52,7 @@ void test_packet_get_crc2(void) {
 
 // @pkt_get_payload:test_packet_get_payload => [payload == "hello world"]
 void test_packet_get_payload(void) {
-    CU_ASSERT_EQUAL(pkt_get_payload(p), "hello world");
+    CU_ASSERT_STRING_EQUAL(pkt_get_payload(p), "hello world");
 }
 
 // @pkt_set_type:test_packet_set_type => [set de PTYPE_DATA ; doit renvoyer un PKT_OK]
@@ -144,6 +144,12 @@ int main(void) {
         return CU_get_error();
     }
 
+    pSuite = CU_add_suite("PACKET", NULL, NULL);
+    if ( NULL == pSuite ) {
+        CU_cleanup_registry();
+        return CU_get_error();
+    }
+
     // Ajout des tests à la suite
     if (NULL == CU_add_test(pSuite, "test_packet_get_type", test_packet_get_type) ||
         NULL == CU_add_test(pSuite, "test_packet_get_tr", test_packet_get_tr) ||
@@ -165,11 +171,13 @@ int main(void) {
         NULL == CU_add_test(pSuite, "test_packet_set_crc2", test_packet_set_crc2) ||
         NULL == CU_add_test(pSuite, "test_packet_set_payload", test_packet_set_payload)) {
         CU_cleanup_registry();
+        printf("DIE\n");
         return CU_get_error();
     }
 
     // Exécution des tests et vidage de la mémoire
     CU_basic_run_tests();
+    CU_get_run_summary();
     CU_cleanup_registry();
 
     return CU_get_error();
