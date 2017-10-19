@@ -2,12 +2,14 @@
 // Created by Alexandre Dewit on 12/10/17.
 //
 #include "../src/paquet/packet_interface.h"
+#include "../src/server_window/server_window_util.h"
 #include <stdlib.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
 struct pkt *p;
 struct pkt *packet;
+window_util_t *windowUtil;
 
 
 // @pkt_get_type:test_packet_get_type[type == PTYPE_DATA]
@@ -110,6 +112,46 @@ void test_packet_set_payload(void) {
     free(packetTest);
 }
 
+// @new_window_util:test_window_init => [Nouveau window_util : ne doit pas etre null apres initialisation]
+void test_window_init(void) {
+    window_util_t *windowUtilTest = new_window_util();
+    CU_ASSERT_NOT_EQUAL(windowUtilTest, NULL);
+    if (windowUtil != NULL) {
+        free(windowUtil);
+
+    }
+}
+
+// @isInSlidingWindow:test_window_IsInWindow => [Le numero de sequence du paquet doit etre present dans la window]
+void test_window_IsInWindow(void) {
+    CU_ASSERT_EQUAL(isInSlidingWindow(windowUtil, pkt_get_seqnum(p)), 1);
+}
+
+// @get_lastReceivedSeqNum:test_window_get_lastSeqnum => [Le dernier numero de sequence recu == 21]
+void test_window_get_lastSeqnum(void) {
+    CU_ASSERT_EQUAL(get_lastReceivedSeqNum(windowUtil), 21);
+}
+
+// @get_window_server:test_window_get_window_server => [la taille du tableau == MAX_WINDOW_SIZE]
+void test_window_get_window_server(void) {
+    CU_ASSERT_EQUAL(get_window_server(windowUtil), MAX_WINDOW_SIZE);
+}
+
+// @set_seqnum_window:test_window_add_seqnum => [On ajoute le paquet et il peut etre ajouté, donc 1 ; on essaye une deuxième fois alors qu'il est deja stocke : 3]
+void test_window_add_seqnum(void) {
+    CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, p), 1);
+    CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, p), 3);
+}
+
+// @set_seqnum_window:test_window_add_seqnum_NotInWindow => [Le seqnum du paquet n'est pas dans la window, donc : 2]
+void test_window_add_seqnum_NotInWindow(void) {
+    pkt_t *pkt1 = pkt_new();
+    pkt_set_seqnum(pkt1, 2);
+    CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, pkt1), 2);
+    if (pkt1 != NULL) pkt_del(pkt1);
+}
+
+
 int main(void) {
 
     //Suite de tests pour les getters
@@ -137,6 +179,14 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    //Suite de tests pour la window
+
+    windowUtil = new_window_util();
+    if (windowUtil == NULL) return EXIT_FAILURE;
+
+    set_lastReceivedSeqNum(windowUtil, 21);
+    set_window(windowUtil, pkt_get_window(p));
+
     CU_pSuite pSuite = NULL;
 
     // Initialisation de la suite de tests
@@ -145,7 +195,7 @@ int main(void) {
     }
 
     pSuite = CU_add_suite("PACKET", NULL, NULL);
-    if ( NULL == pSuite ) {
+    if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();
     }
@@ -169,7 +219,13 @@ int main(void) {
         NULL == CU_add_test(pSuite, "test_packet_set_timestamp", test_packet_set_timestamp) ||
         NULL == CU_add_test(pSuite, "test_packet_set_crc1", test_packet_set_crc1) ||
         NULL == CU_add_test(pSuite, "test_packet_set_crc2", test_packet_set_crc2) ||
-        NULL == CU_add_test(pSuite, "test_packet_set_payload", test_packet_set_payload)) {
+        NULL == CU_add_test(pSuite, "test_packet_set_payload", test_packet_set_payload) ||
+        NULL == CU_add_test(pSuite, "test_window_init", test_window_init) ||
+        NULL == CU_add_test(pSuite, "test_window_get_lastSeqnum", test_window_get_lastSeqnum) ||
+        NULL == CU_add_test(pSuite, "test_window_IsInWindow", test_window_IsInWindow) ||
+        NULL == CU_add_test(pSuite, "test_window_get_window_server", test_window_get_window_server) ||
+        NULL == CU_add_test(pSuite, "test_window_add_seqnum", test_window_add_seqnum) ||
+        NULL == CU_add_test(pSuite, "test_window_add_seqnum_NotInWindow", test_window_add_seqnum_NotInWindow)) {
         CU_cleanup_registry();
         printf("DIE\n");
         return CU_get_error();

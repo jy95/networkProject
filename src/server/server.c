@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 //Bon type de paquet et pas tronque
-            } else if (pkt_get_tr(p) == 0) {
+            } else if (pkt_get_tr(p) == 0 && isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1) {
 
                 //On cree le nouveau paquet
 
@@ -148,12 +148,9 @@ int main(int argc, char *argv[]) {
 
                 if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
                     set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
-                    printer(windowUtil,
-                            p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
-
-                    //TODO Si les paquets suivants on deja ete stocke, alors on les sort aussi
-                    // Ecrire le tout sur la sortie standard
+                    printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
                 } else {
+
                     add_window_packet(windowUtil, p); //On stocke le paquet au frais
                 }
 

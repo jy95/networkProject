@@ -144,9 +144,9 @@ unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum);
  * sliding window
  * @param windowUtil
  * @param p
- * @return le paquet retire de la liste des paquets, NULL sinon
+ * @return 1 si le paquet a ete rajoute; 2 si le paqut n'est pas dans la sliding window ou la window est full, 3 si le paquet a deja ete ajoute
  */
-pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p);
+int set_seqnum_window(window_util_t *windowUtil, pkt_t *p);
 
 /**
  *

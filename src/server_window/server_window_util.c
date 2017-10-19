@@ -75,14 +75,15 @@ pkt_t *remove_window_packet(window_util_t *windowUtil, uint8_t seqnum) {
 }
 
 unsigned int isPresent_seqnum_window(window_util_t *windowUtil, uint8_t seqnum) {
-    int lastSeqNum = get_lastReceivedSeqNum(windowUtil);
-    int endSlidingWindow = lastSeqNum + get_window(windowUtil);
-    int EndIntervalWindow = (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES;
+    if(get_window_server(windowUtil) == 0) return 0;
 
-    int test1 = seqnum < lastSeqNum + 1 || seqnum > EndIntervalWindow; // Hors de la window
+    int lastSeqNum = get_lastReceivedSeqNum(windowUtil);
+    int EndIntervalWindow = (lastSeqNum + get_window_server(windowUtil)) % MAX_STORED_PACKAGES;
+
+    int test1 = seqnum < (lastSeqNum + 1) % MAX_STORED_PACKAGES || seqnum > EndIntervalWindow; // Hors de la window
     int test2 = EndIntervalWindow - lastSeqNum + 1 > 0; //Cas normal : window ne chevauche pas le tableau
-    int test3 = seqnum < lastSeqNum + 1 && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
-    int test4 = endSlidingWindow - lastSeqNum + 1 < 0; // La window chevauche
+    int test3 = seqnum < (lastSeqNum + 1) % MAX_STORED_PACKAGES && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
+    int test4 = EndIntervalWindow - lastSeqNum + 1 < 0; // La window chevauche
 
     if ((test1 && test2) || (test3 && test4)) { //Nous ne sommes pas dans la sliding window
         return 0;
@@ -91,14 +92,14 @@ unsigned int isPresent_seqnum_window(window_util_t *windowUtil, uint8_t seqnum) 
 }
 
 unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum) {
+    if(get_window_server(windowUtil) == 0) return 0;
     int lastSeqNum = get_lastReceivedSeqNum(windowUtil);
-    int endSlidingWindow = lastSeqNum + get_window(windowUtil);
-    int EndIntervalWindow = (lastSeqNum + get_window(windowUtil)) % MAX_STORED_PACKAGES;
+    int EndIntervalWindow = (lastSeqNum + get_window_server(windowUtil)) % MAX_STORED_PACKAGES;
 
-    int test1 = seqnum < lastSeqNum + 1 || seqnum > EndIntervalWindow; // Hors de la window
+    int test1 = seqnum < (lastSeqNum + 1) % MAX_STORED_PACKAGES || seqnum > EndIntervalWindow; // Hors de la window
     int test2 = EndIntervalWindow - lastSeqNum + 1 > 0; //Cas normal : window ne chevauche pas le tableau
-    int test3 = seqnum < lastSeqNum + 1 && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
-    int test4 = endSlidingWindow - lastSeqNum + 1 < 0; // La window chevauche
+    int test3 = seqnum < (lastSeqNum + 1) % MAX_STORED_PACKAGES && seqnum > EndIntervalWindow; // Hors de la window (chevauche)
+    int test4 = EndIntervalWindow - lastSeqNum + 1 < 0; // La window chevauche
 
     if ((test1 && test2) || (test3 && test4)) { //Nous ne sommes pas dans la sliding window
         return 0;
@@ -107,15 +108,15 @@ unsigned int isInSlidingWindow(window_util_t *windowUtil, uint8_t seqnum) {
     return 1;
 }
 
-pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
+int set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
     uint8_t seqnum = pkt_get_seqnum(p);
 
-    if(get_window(windowUtil) == 0) return NULL;
+    if(get_window_server(windowUtil) == 0) return 2;
 
 
     //Nous ne sommes pas dans la sliding window
     if (isInSlidingWindow(windowUtil, seqnum) == 0) {
-        return NULL;
+        return 2;
     }
 
     //Le seqnum n'est pas encore present
@@ -125,11 +126,11 @@ pkt_t *set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
         set_window_server(windowUtil, window_server);
         set_seqAck(windowUtil, seqnum); //On set a 1 la case numero seqnum de seqAck
         windowUtil->storedPackets[seqnum] = p;
-        return NULL;
+        return 1;
     }
 
     //le seqnum est present et donc deja ajoute
-    return NULL;
+    return 3;
 }
 
 void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
