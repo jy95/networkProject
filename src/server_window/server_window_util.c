@@ -35,7 +35,6 @@ void set_window_server(window_util_t *windowUtil, uint8_t size) {
 }
 
 int set_lastReceivedSeqNum(window_util_t *windowUtil, int lastReceivedSeqNum) {
-    if (windowUtil == NULL) return -1;
     windowUtil->lastReceivedSeqNum = lastReceivedSeqNum;
     return 0;
 }

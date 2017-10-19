@@ -129,6 +129,7 @@ void test_window_IsInWindow(void) {
 
 // @get_lastReceivedSeqNum:test_window_get_lastSeqnum => [Le dernier numero de sequence recu == 21]
 void test_window_get_lastSeqnum(void) {
+    set_lastReceivedSeqNum(windowUtil, 21);
     CU_ASSERT_EQUAL(get_lastReceivedSeqNum(windowUtil), 21);
 }
 
@@ -185,6 +186,7 @@ int main(void) {
     if (windowUtil == NULL) return EXIT_FAILURE;
 
     set_lastReceivedSeqNum(windowUtil, 21);
+
     set_window(windowUtil, pkt_get_window(p));
 
     CU_pSuite pSuite = NULL;
