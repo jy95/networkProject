@@ -34,25 +34,25 @@ int main(int argc, char *argv[]) {
     // on affiche l'adresse IPV6 qu'on utilise
     char ipAddress[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &(rval.sin6_addr), ipAddress, INET6_ADDRSTRLEN);
-    fprintf(stdout, "Use IPV6 Address: %s\n", ipAddress);
+    fprintf(stderr, "Use IPV6 Address: %s\n", ipAddress);
 
     int socketFileDescriptor;
 
     if ((socketFileDescriptor = create_socket(NULL, -1, &rval, option_arg->port)) < 0)
         return EXIT_FAILURE; //On connecte le client au serveur
 
-    fprintf(stdout, "Socket successfully created - listenning to port %d\n", option_arg->port);
+    fprintf(stderr, "Socket successfully created - listenning to port %d\n", option_arg->port);
 
     networkInfo receiverInfo;
 
     // Step : Calculer le RTT initial pour envoyer un packet (en théorie, doit être recalculé à chaque réception de (N)ACK)
-    if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1) {
-        fprintf(stdout, "Cannot estimate RTT and Window size of receiver\n");
+    if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1 ) {
+        fprintf(stderr, "Cannot estimate RTT and Window size of receiver\n");
         return EXIT_FAILURE;
     }
 
-    fprintf(stdout, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
-    fprintf(stdout, "Initial window size of receiver : %d ms \n", receiverInfo.windowsReceiver);
+    fprintf(stderr, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
+    fprintf(stderr, "Initial window size of receiver : %d ms \n", receiverInfo.windowsReceiver);
 
     // Step : Envoi de message
 
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
             char receivedBuffer[MAX_PACKET_RECEIVED_SIZE];
             ssize_t readCount;
 
-            if ((readCount = read(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE)) == -1) {
+            if ((readCount = read(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE)) == -1 ) {
                 fprintf(stderr, "Cannot read from socket : %s\n", strerror(errno));
                 finalExit = EXIT_FAILURE;
             } else {

@@ -194,7 +194,7 @@ int main(void) {
         return CU_get_error();
     }
 
-    pSuite = CU_add_suite("PACKET", NULL, NULL);
+    pSuite = CU_add_suite("TESTS", NULL, NULL);
     if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();

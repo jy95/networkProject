@@ -71,6 +71,7 @@ RECEIVER_SRC += $(COMMON_SOURCES)
 
 TESTS_SRC += $(PACKET_SOURCES)
 TESTS_SRC += $(TESTS_SOURCES)
+TESTS_SRC += $(WINDOW_SERVER_SOURCES)
 
 ALL_OBJ += $(SENDER_SRC:.c=.o)
 ALL_OBJ += $(RECEIVER_SRC:.c=.o)
@@ -88,7 +89,7 @@ receiver: $(RECEIVER_SRC); \
 
 #$(INCLUDES) si nécessaire
 tests: $(TESTS_SRC); \
-		$(CC) $(CFLAGS) $^ $(LDFLAGS) -o testsScript;
+		$(CC) $(CFLAGS) $^ $(LDFLAGS) -o testsScript && ./testsScript;
 
 .PHONY: all clean tests
 
