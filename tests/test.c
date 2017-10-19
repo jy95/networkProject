@@ -147,9 +147,13 @@ void test_window_add_seqnum(void) {
 // @set_seqnum_window:test_window_add_seqnum_NotInWindow => [Le seqnum du paquet n'est pas dans la window, donc : 2]
 void test_window_add_seqnum_NotInWindow(void) {
     pkt_t *pkt1 = pkt_new();
+    if(pkt1 == NULL)
+        return;
+
     pkt_set_seqnum(pkt1, 2);
     CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, pkt1), 2);
-    if (pkt1 != NULL) pkt_del(pkt1);
+
+    pkt_del(pkt1);
 }
 
 
@@ -230,6 +234,11 @@ int main(void) {
         NULL == CU_add_test(pSuite, "test_window_add_seqnum_NotInWindow", test_window_add_seqnum_NotInWindow)) {
         CU_cleanup_registry();
         printf("DIE\n");
+
+        del_window_util(windowUtil);
+        pkt_del(p);
+        pkt_del(packet);
+
         return CU_get_error();
     }
 
@@ -237,6 +246,10 @@ int main(void) {
     CU_basic_run_tests();
     CU_get_run_summary();
     CU_cleanup_registry();
+
+    del_window_util(windowUtil);
+    pkt_del(p);
+    pkt_del(packet);
 
     return CU_get_error();
 
