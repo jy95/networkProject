@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "server_window_util.h"
 
 window_util_t *new_window_util() {
@@ -137,7 +138,7 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
 
     if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnum && isInSlidingWindow(windowUtil, seqnum)) {
 
-        fprintf(stdout, "%s", pkt_get_payload(first_pkt));
+        fwrite(pkt_get_payload(first_pkt), pkt_get_length(first_pkt), 1, stdout);
 
         set_lastReceivedSeqNum(windowUtil, seqnum);
         unset_seqAck(windowUtil, seqnum);
@@ -166,3 +167,35 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
 
 }
 
+
+int isSendingWindowFull(window_util_t *windowUtil) {
+
+    // on obtient la taille
+    int windowSize = get_window(windowUtil);
+
+    // si la fenêtre du client est à 0, c'est bloquant
+    if ( windowSize == 0 )
+        return 1;
+
+    uint8_t index = get_first_value_window(windowUtil);
+    // par défaut, y a pas de place
+    int result = 1;
+    // savoir si on doit continuer
+    int shouldContinue = 1;
+    // un counter pour savoir combien d'éléments on doit parcourir
+    int count = 0;
+
+    while (count < windowSize && shouldContinue == 1) {
+
+        // technique en C pour checker si cela est null
+        if ((windowUtil->storedPackets)[index] ) {
+            // on a trouvé un emplacement libre
+            result = 0;
+            // on arrête la boucle
+            shouldContinue--;
+        }
+        index++;
+        count++;
+    }
+    return result;
+}

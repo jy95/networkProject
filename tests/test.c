@@ -116,10 +116,6 @@ void test_packet_set_payload(void) {
 void test_window_init(void) {
     window_util_t *windowUtilTest = new_window_util();
     CU_ASSERT_NOT_EQUAL(windowUtilTest, NULL);
-    if (windowUtil != NULL) {
-        free(windowUtil);
-
-    }
 }
 
 // @isInSlidingWindow:test_window_IsInWindow => [Le numero de sequence du paquet doit etre present dans la window]
@@ -147,13 +143,13 @@ void test_window_add_seqnum(void) {
 // @set_seqnum_window:test_window_add_seqnum_NotInWindow => [Le seqnum du paquet n'est pas dans la window, donc : 2]
 void test_window_add_seqnum_NotInWindow(void) {
     pkt_t *pkt1 = pkt_new();
-    if(pkt1 == NULL)
-        return;
-
-    pkt_set_seqnum(pkt1, 2);
-    CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, pkt1), 2);
-
-    pkt_del(pkt1);
+    if ( !pkt1 ) {
+        CU_FAIL("MALLOC FAIL FOR test");
+    } else {
+        pkt_set_seqnum(pkt1, 2);
+        CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, pkt1), 2);
+        pkt_del(pkt1);
+    }
 }
 
 
@@ -161,9 +157,7 @@ int main(void) {
 
     //Suite de tests pour les getters
 
-    p = malloc(sizeof(struct pkt));
-
-    if (p == NULL) {
+    if ((p = malloc(sizeof(pkt_t))) == NULL ) {
         return EXIT_FAILURE;
     }
 
@@ -245,6 +239,7 @@ int main(void) {
     // Exécution des tests et vidage de la mémoire
     CU_basic_run_tests();
     CU_get_run_summary();
+    CU_basic_show_failures(CU_get_failure_list());
     CU_cleanup_registry();
 
     del_window_util(windowUtil);

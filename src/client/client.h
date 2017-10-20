@@ -21,7 +21,8 @@
 
 #define MAX_LATENCE_TIME    2000 // le temps maximal
 #define MAX_PAYLOAD_SIZE    512  // la taille MAX du payload
-#define MAX_PACKET_RECEIVED_SIZE 530// la taille du
+#define MAX_PACKET_RECEIVED_SIZE 530// la taille max
+#define DEFAULT_CLIENT_WINDOW_SIZE  5 // une taille de window par défaut
 
 // structure pour le calcul de RTT
 typedef struct networkInfo {

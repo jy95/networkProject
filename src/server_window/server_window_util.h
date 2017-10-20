@@ -180,5 +180,18 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt);
  */
 int get_first_value_window(window_util_t* windowUtil);
 
+/**
+ * Permet de savoir si notre fenêtre d'envoi (du sender) est pleine
+ * cad qu'il n'est plus possible d'envoyer de nouveaux messages du sender au receiver
+ * @param windowUtil
+ * @return 1 si c'est le cas , 0 sinon
+ */
+int isSendingWindowFull(window_util_t *windowUtil);
+
+/**
+ * Permet au sender de connaitre le prochain numéro de séquence qu'il peut utiliser dans sa window d'envoi
+ * @param windowUtil
+ * @return le num ; -1 sinon
+ */
 
 #endif //PROJECT_SERVER_WINDOW_UTIL_H

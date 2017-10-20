@@ -38,8 +38,10 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
     unsigned int succes = 0;
 
     // init du faux packet
+    // En résumé, c'est un packet tronqué (payload = 0) de type DATA
     pkt_set_seqnum(emptyPacket, 1);
     pkt_set_type(emptyPacket, PTYPE_DATA);
+    pkt_set_window(emptyPacket, DEFAULT_CLIENT_WINDOW_SIZE);
     pkt_set_tr(emptyPacket, 1);
     pkt_set_length(emptyPacket,0);
 

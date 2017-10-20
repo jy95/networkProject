@@ -89,7 +89,8 @@ receiver: $(RECEIVER_SRC); \
 
 #$(INCLUDES) si nécessaire
 tests: $(TESTS_SRC); \
-		$(CC) $(CFLAGS) $^ $(LDFLAGS) -o testsScript && ./testsScript;
+		$(CC) $(CFLAGS) $^ $(LDFLAGS) -o testsScript; \
+		./testsScript;
 
 .PHONY: all clean tests
 

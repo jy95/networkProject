@@ -44,6 +44,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Socket successfully created - listenning to port %d\n", option_arg->port);
 
     networkInfo receiverInfo;
+    // init de la windows
+    window_util_t *windowUtil = new_window_util();
+    if ( windowUtil == NULL ) {
+        fprintf(stderr, "Cannot init client window\n");
+        return EXIT_FAILURE;
+    }
 
     // Step : Calculer le RTT initial pour envoyer un packet (en théorie, doit être recalculé à chaque réception de (N)ACK)
     if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1 ) {
@@ -56,9 +62,8 @@ int main(int argc, char *argv[]) {
 
     // Step : Envoi de message
 
-    // init de la windows
-    window_util_t *windowUtil = new_window_util();
     set_window_server(windowUtil, receiverInfo.windowsReceiver);
+    set_window(windowUtil, DEFAULT_CLIENT_WINDOW_SIZE);
 
     int transferNotFinished = 1;
     int shouldRead = 1;
@@ -91,6 +96,7 @@ int main(int argc, char *argv[]) {
         if (result == 0) {
             // timer expiré , on doit resender tous les packets non envoyés
             // TODO resender les packets de la window
+            sendNotReceivedPackets(sfd, windowUtil);
         }
 
         if (result == -1) {
