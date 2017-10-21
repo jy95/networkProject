@@ -129,6 +129,14 @@ void unset_seqAck(window_util_t *windowUtil, uint8_t seqnum);
 pkt_t *remove_window_packet(window_util_t *windowUtil, uint8_t seqnum);
 
 /**
+ * Renvoit le packet sans le retirer
+ * @param windowUtil
+ * @param seqnum
+ * @return le paquet ayant le numero de sequence seqnum dans storedPacket
+ */
+pkt_t *get_window_packet(window_util_t *windowUtil, uint8_t seqnum);
+
+/**
  * Permet de check si un numero de sequence est dans les bornes de la sliding window
  * @param windowUtil
  * @param seqnum

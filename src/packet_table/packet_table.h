@@ -22,4 +22,12 @@ void addElem(pkt_t **packets, pkt_t *p);
  */
 pkt_t *removeElem(pkt_t **packets, uint8_t seqnum);
 
+/**
+ * Permet d'obtenir un element de la liste packets
+ * @param packets
+ * @param seqnum
+ * @return La référence du packet
+ */
+pkt_t * getElem(pkt_t **packets, uint8_t seqnum);
+
 #endif //PROJECT_PACKET_TABLE_H

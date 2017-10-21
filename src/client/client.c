@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
     int transferNotFinished = 1;
 
     // timestamp
-    // TODO le timestamp qui va nous servir à l'envoi
     uint32_t timestamp;
 
     // la struct pour poll
@@ -102,9 +101,51 @@ int main(int argc, char *argv[]) {
 
         result = poll(ufds, 2, timer);
 
-        if (result == 0) {
+        //  le timer a expiré et la taille de la window n'est pas 0
+        if (result == 0 && get_window_server(windowUtil) != 0) {
             // timer expiré , on doit resender tous les packets non envoyés
-            // TODO resendPackets 
+            // pour savoir combien de paquets on peut renvoyer à receiver
+            int maxSendCounter = (sendCounter < get_window_server(windowUtil)) ? sendCounter : get_window_server(windowUtil);
+            // à partir de quel packet on send tout cela
+            int startIndex = FirstSeqNumInWindow;
+            int shouldStopResend = 0; // pour arrêter prématurément la boucle
+            int resendCounter = 0;
+
+            // on arrête la boucle si on a un probleme
+            while (shouldStopResend == 0 && finalExit != EXIT_SUCCESS){
+                pkt_t * packetToBeResend = get_window_packet(windowUtil,startIndex);
+
+
+                if (packetToBeResend != NULL){
+                    char packetBuffer[MAX_PAYLOAD_SIZE];
+                    size_t writeLength = MAX_PAYLOAD_SIZE;
+                    pkt_status_code problem;
+
+                    if ( (problem = pkt_encode(packetToBeResend,packetBuffer,&writeLength)) != PKT_OK) {
+                        fprintf(stderr, "Cannot encode packet : ignored - err code : %d \n",problem);
+                        finalExit = EXIT_FAILURE;
+                    } else {
+
+                        // on envoit finalement ce packet
+                        ssize_t writeCount;
+
+                        if ( (writeCount = write(socketFileDescriptor, packetBuffer, writeLength)) < 0){
+                            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                                fprintf(stderr, "Cannot write from dest : %s\n", strerror(errno));
+                                finalExit = EXIT_FAILURE;
+                            }
+                        }
+                    }
+                }
+
+                // condition pour finir
+                if (resendCounter == maxSendCounter){
+                    shouldStopResend = 1;
+                }
+                // on avance au prochain packet
+                startIndex++;
+            }
+
         }
 
         if (result == -1) {
@@ -229,7 +270,29 @@ int main(int argc, char *argv[]) {
                             // On checke s'il est bien dans la sliding window
                             if (isInSlidingWindowOfClient(seqNumToCheck,FirstSeqNumInWindow,sendCounter) == 1){
 
-                                // TODO supprimer les packets de la window et la faire avancer
+                                // supprimer les packets de la window et la faire avancer
+                                uint8_t deleteIndex = FirstSeqNumInWindow;
+                                int shouldStopRemove = 0; // stop remove when reach
+
+                                while (shouldStopRemove == 0){
+                                    // on supprime le packet
+                                    // côté client, on ne sait pas ce qu'on a réussi à envoyer avec un réordonnancement
+                                    pkt_t * packetToBeRemoved = remove_window_packet(windowUtil,deleteIndex);
+                                    if (packetToBeRemoved != NULL) {
+                                        free(packetToBeRemoved);
+                                    }
+                                    // on décrémente le nombre de packets envoyés (puisque le receiver a recu le packet)
+                                    sendCounter--;
+
+                                    // on incrémente la taille de notre window (puisqu'on a une nouvelle place libre)
+                                    set_window(windowUtil, get_window(windowUtil) +1);
+
+                                    // quand on s'arrête
+                                    if (deleteIndex == seqNumToCheck){
+                                        shouldStopRemove++;
+                                    }
+                                    deleteIndex++;
+                                }
 
                                 // on sait désormais que les n packets jusqu'à ce num ont été correctement envoyés et recues
                                 // le premier numéro dans la window devient donc seqNumToCheck +1
@@ -239,8 +302,11 @@ int main(int argc, char *argv[]) {
                         }
 
                         // Si on recoit un packet de type NACK ; on sait que le réseau est congestionné
-                        // de ce fait, on réduit notre window
-                        // TODO
+                        if (pkt_get_type(receivedPacket) == PTYPE_NACK){
+
+                            // de ce fait, on réduit notre window
+                            set_window(windowUtil, get_window(windowUtil) -1);
+                        }
 
                     }
 

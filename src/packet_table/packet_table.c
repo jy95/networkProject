@@ -19,3 +19,10 @@ pkt_t *removeElem(pkt_t **packets, uint8_t seqnum) {
     return p;
 
 }
+
+pkt_t * getElem(pkt_t **packets, uint8_t seqnum) {
+    if(packets[seqnum] == NULL) {
+        return NULL;
+    }
+    return  packets[seqnum];
+}

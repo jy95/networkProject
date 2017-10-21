@@ -74,6 +74,10 @@ pkt_t *remove_window_packet(window_util_t *windowUtil, uint8_t seqnum) {
     return removeElem(windowUtil->storedPackets, seqnum);
 }
 
+pkt_t *get_window_packet(window_util_t *windowUtil, uint8_t seqnum) {
+    return getElem(windowUtil->storedPackets, seqnum);
+}
+
 unsigned int isPresent_seqnum_window(window_util_t *windowUtil, uint8_t seqnum) {
     if(get_window_server(windowUtil) == 0) return 0;
 
