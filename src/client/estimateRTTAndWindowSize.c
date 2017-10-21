@@ -10,10 +10,6 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
     // timers
     time_t start_t, end_t;
 
-    // en théorie, on est sensé checker que l'addresse de destination recu est la même que celle envoyé
-    // ici, je suppose qu'il n'y a de problème
-    struct sockaddr_in6 dest;
-
     // un faux packet, envoyé hors séquence
 
     pkt_t *emptyPacket = pkt_new();
@@ -45,13 +41,11 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
     pkt_set_tr(emptyPacket, 1);
     pkt_set_length(emptyPacket,0);
 
-    size_t length = 20;
-    char sendBuf[length];
-    pkt_status_code problem;
-
-    char receivedBuf[length];
-
     while (result != -1) {
+        size_t length = 20;
+        char sendBuf[length];
+        pkt_status_code problem;
+        char receivedBuf[length];
 
         // la struct pour poll
         struct pollfd ufds[1];
@@ -70,10 +64,13 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
             // démarrage du timer start
             time(&start_t);
 
-            // on send notre message
-            if ( sendto(sfd, sendBuf, length, 0, (struct sockaddr *) &dest, sizeof dest) == -1) {
-                fprintf(stderr,"Cannot send empty packet to receiver\n");
-                result = -1;
+            ssize_t writeCount;
+
+            if ( (writeCount = write(sfd, sendBuf, length)) < 0){
+                if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                    fprintf(stderr, "Cannot send empty packet to receiver : %s\n", strerror(errno));
+                    result = -1;
+                }
             } else {
                 // on lance notre timer
                 result = poll(ufds, 1, 2 *MAX_LATENCE_TIME);
@@ -88,12 +85,13 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
                     if ( ufds[0].revents & POLLIN ) {
 
                         // lecture du packet
-                        socklen_t fromlen = sizeof dest;
-                        int byte_count;
+                        ssize_t byte_count;
 
-                        if ( (byte_count = recvfrom(sfd, receivedBuf, length, 0, (struct sockaddr *) &dest, &fromlen)) == -1 ){
-                            fprintf(stderr,"Cannot allocate received buffer\n");
-                            result = -1;
+                        if ( (byte_count = read(sfd,receivedBuf,length)) < 0){
+                            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                                fprintf(stderr, "Cannot allocate received buffer : %s\n", strerror(errno));
+                                result = -1;
+                            }
                         } else {
 
                             if ((problem = pkt_decode(receivedBuf,byte_count,recu)) != PKT_OK){

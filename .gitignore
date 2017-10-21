@@ -12,6 +12,13 @@ receiver
 sender
 testsScript
 
+# les fichiers de tests
+input_file
+link.log
+receiver.log
+received_file
+sender.log
+
 # Modules src
 modules/src
 
