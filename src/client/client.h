@@ -47,7 +47,8 @@ int getDiffTimeInMs(time_t * start, time_t * end);
 int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow);
 
 // check si le numéro de seq dans la window du client
-//unsigned int isInSlidingWindowOfClient(window_util_t *windowUtil, uint8_t seqnum);
+// 1, si c'est le cas ; 0 sinon
+unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count);
 
 // resender les packets dont on a pas recu de ACK
 // iteration dans la sending window

@@ -69,7 +69,6 @@ int main(int argc, char *argv[]) {
     set_window(windowUtil, DEFAULT_CLIENT_WINDOW_SIZE);
 
     int transferNotFinished = 1;
-    int shouldRead = 1;
 
     // timestamp
     // TODO le timestamp qui va nous servir à l'envoi
@@ -95,6 +94,9 @@ int main(int argc, char *argv[]) {
     uint8_t SeqNumToBeSent = 0; // le numéro de séquence pour envoyer nos packets
     uint8_t FirstSeqNumInWindow = 0; // le premier numéro dans la window
 
+    // nombre de packets envoyés
+    int sendCounter = 0;
+
     // tant que transfer pas fini
     while (transferNotFinished && finalExit != EXIT_SUCCESS) {
 
@@ -102,7 +104,7 @@ int main(int argc, char *argv[]) {
 
         if (result == 0) {
             // timer expiré , on doit resender tous les packets non envoyés
-            // TODO remove_window_packet
+            // TODO resendPackets 
         }
 
         if (result == -1) {
@@ -110,8 +112,11 @@ int main(int argc, char *argv[]) {
             finalExit = EXIT_FAILURE;
         }
 
-        // on a des données sur STDIN (et on veut encore lire (et qu'on peut encore envoyer un message)
-        if ((ufds[0].revents & POLLIN) && isSendingWindowFull(windowUtil,FirstSeqNumInWindow) == 0 && shouldRead) {
+        // on a des données sur STDIN et qu'on peut encore envoyer un message
+        // et que la window du receiver n'est pas égale à 0
+        if ((ufds[0].revents & POLLIN)
+            && isSendingWindowFull(windowUtil,FirstSeqNumInWindow) == 0
+            && get_window_server(windowUtil) != 0 ) {
 
             // on lit et on stocke
             char receivedBuffer[MAX_PAYLOAD_SIZE];
@@ -156,17 +161,20 @@ int main(int argc, char *argv[]) {
                                 fprintf(stderr, "Cannot write from dest : %s\n", strerror(errno));
                                 finalExit = EXIT_FAILURE;
                             }
+                        } else {
+                            // on a envoyé un message
+                            sendCounter++;
+                            // on diminue la taille de la window
+                            set_window(windowUtil, get_window(windowUtil) - 1);
                         }
-
-                        // TODO le reste ?
                     }
                 }
 
             }
 
-            // feof , on a rencontré un EOF
+            // feof , on a rencontré un EOF ; arrêt du send
             if (feof(stdin)) {
-                shouldRead = 0;
+                transferNotFinished = 0;
             }
         }
 
@@ -209,28 +217,30 @@ int main(int argc, char *argv[]) {
                         RTT = (RTT + diffTime) / 2;
                         timer = RTT;
 
+                        // on set la taille de la window server
+                        set_window_server(windowUtil, pkt_get_window(receivedPacket));
+
                         // On ne s'intéresse qu'aux packet de type ACK
                         if (pkt_get_type(receivedPacket) == PTYPE_ACK) {
 
-                            uint8_t lastSeqNumReceivedByServer = pkt_get_seqnum(receivedPacket);
+                            uint8_t seqNumToCheck = pkt_get_seqnum(receivedPacket);
+                            fprintf(stderr,"RECEIVED : ACK with seqNum : %d \n",seqNumToCheck);
 
-                            // TODO supprimer cela
-                            // code bidon pour make
-                            if (lastSeqNumReceivedByServer){
-
-                            }
-
-                            // TODO Code à continuer
-                            /*
-                            if (isInSlidingWindowOfClient(windowUtil,lastSeqNumReceivedByServer) == 1){
+                            // On checke s'il est bien dans la sliding window
+                            if (isInSlidingWindowOfClient(seqNumToCheck,FirstSeqNumInWindow,sendCounter) == 1){
 
                                 // TODO supprimer les packets de la window et la faire avancer
 
                                 // on sait désormais que les n packets jusqu'à ce num ont été correctement envoyés et recues
-                                set_lastReceivedSeqNum(windowUtil, lastSeqNumReceivedByServer);
-                            }*/
+                                // le premier numéro dans la window devient donc seqNumToCheck +1
+                                FirstSeqNumInWindow = (seqNumToCheck + 1);
+                            }
 
                         }
+
+                        // Si on recoit un packet de type NACK ; on sait que le réseau est congestionné
+                        // de ce fait, on réduit notre window
+                        // TODO
 
                     }
 
@@ -285,6 +295,34 @@ int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow) {
         }
         index++;
         count++;
+    }
+    return result;
+}
+
+/**
+ * Permet de savoir si le numéro de sequence est valide
+ * @param seqnum le numéro à vérfier
+ * @param start le numéro de séquence du début de la window
+ * @param count le nombre de message envoyés
+ * @return 1 si c'est le cas , 0 sinon
+ */
+unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count) {
+
+    // à partir de quel numéro on commence
+    uint8_t index = start;
+    int counter = 0; // pour savoir
+    int shouldStop = 0; // pour savoir si on doit s'arrêter dans le while
+    int result = 0; // par défaut c'est hors séquence
+
+    while (counter < count && shouldStop == 0){
+
+        // on a trouvé notre numéro de séquence
+        if (index == seqnum){
+            shouldStop = 1;
+            result = 1;
+        }
+        index++; //
+        counter++; // on incrémente pour checker le suivant
     }
     return result;
 }
