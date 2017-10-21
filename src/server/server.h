@@ -7,7 +7,7 @@
 
 #define BUFFER_MAX_SIZE 31
 #define MAX_WINDOW_SIZE 32
-
+#define MAX_PACKET_RECEIVED_SIZE_FOR_SERVER 530// la taille max
 
 #include <arpa/inet.h>
 #include <memory.h>

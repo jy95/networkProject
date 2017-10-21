@@ -99,6 +99,8 @@ int main(int argc, char *argv[]) {
         if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
             set_window(windowUtil, pkt_get_window(p)); //On recupere la taille de la window du client
 
+            fprintf(stderr,"Received valid PACKET N° %d\n", (int) pkt_get_seqnum(p));
+
             //Bon type de paquet mais tronque
             if (pkt_get_tr(p) == 1) {
 
@@ -116,15 +118,15 @@ int main(int argc, char *argv[]) {
                 pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
                 pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
 
-                char buff[lengthReceivedPacket];
+                char buff[MAX_PACKET_RECEIVED_SIZE_FOR_SERVER];
 
-                size_t len = 0;
+                size_t len = MAX_PACKET_RECEIVED_SIZE_FOR_SERVER; // la taille de notre buffer pour répondre
 
                 // On encode la nouveau paquet
 
                 pkt_status_code err;
                 if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
-                    fprintf(stderr, "encode error %d :", err);
+                    fprintf(stderr, "Error when encoding the response packet - error %d :", err);
                     if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
@@ -132,7 +134,7 @@ int main(int argc, char *argv[]) {
                 // On envoie le paquet au client
 
                 if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
-                    fprintf(stderr, "Sending error"); //Erreur lors de l'envoi des donnees
+                    fprintf(stderr, "Error when sending error"); //Erreur lors de l'envoi des donnees
                     if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }

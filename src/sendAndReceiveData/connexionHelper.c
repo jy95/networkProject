@@ -96,7 +96,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
     }
 
         // On veut connecter le socket avec une destination
-    else if (dest_addr) {
+    if (dest_addr) {
 
         // un port custom a été demandé
         if (dst_port > 0) {

@@ -43,9 +43,6 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Socket successfully created - listenning to port %d\n", option_arg->port);
 
-    // set mode non bloquant
-    int previousFlags = fcntl(socketFileDescriptor, F_GETFL, 0);
-    fcntl(socketFileDescriptor, F_SETFL, previousFlags | O_NONBLOCK);
 
     networkInfo receiverInfo;
     // init de la windows
