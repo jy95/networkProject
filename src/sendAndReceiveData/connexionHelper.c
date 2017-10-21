@@ -50,9 +50,6 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
         struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)result->ai_addr;
         memcpy(rval,ipv6,sizeof(*ipv6));
 
-        // pour s'assurer que le numéro de port est bien dans l'endianisme de la machine
-        rval->sin6_port = htons(rval->sin6_port);
-
         // et que c'est de IPV6
         rval->sin6_family = AF_INET6;
 
