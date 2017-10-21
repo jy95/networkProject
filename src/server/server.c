@@ -49,18 +49,20 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    fprintf(stderr,"Waiting for client \n");
+    if (wait_for_client(socketFileDescriptor) == -1) {       //Connexion a un client
+        fprintf(stderr, "failed to wait for client");
+        if (fp != NULL) fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    fprintf(stderr,"A client is connected\n");
+
     while (lengthReceivedPacket != 0 || seqnumPacket != lastSeqAck) {
 
         lastSeqAck = seqnumPacket;
 
-        if (wait_for_client(socketFileDescriptor) == -1) {       //Connexion a un client
-            fprintf(stderr, "failed to wait for client");
-            if (fp != NULL) fclose(fp);
-            return EXIT_FAILURE;
-        }
-
         //Recuperation des donnees
-
         if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0,
                           (struct sockaddr *) &rval, &fromsize)) < 0) {
             fprintf(stderr, "Nothing to receive"); //On a rien reçu

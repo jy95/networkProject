@@ -115,6 +115,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
     return socketFileDescriptor;
 }
 
+// PARTIE A DROPPER : géré de manière plus efficage dans les codes principaux
 void read_write_loop(int sfd) {
 
     // les variables pour opérer avec select
