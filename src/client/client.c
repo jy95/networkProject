@@ -129,8 +129,7 @@ int main(int argc, char *argv[]) {
 
                         // on envoit finalement ce packet
                         ssize_t writeCount;
-
-                        if ( (writeCount = write(socketFileDescriptor, packetBuffer, writeLength)) < 0){
+                        if ( (writeCount = send(socketFileDescriptor,packetBuffer,writeLength,MSG_DONTWAIT)) < 0){
                             if (errno != EWOULDBLOCK && errno != EAGAIN) {
                                 fprintf(stderr, "Cannot write from dest : %s\n", strerror(errno));
                                 finalExit = EXIT_FAILURE;
@@ -198,7 +197,7 @@ int main(int argc, char *argv[]) {
                         // on envoit finalement ce packet
                         ssize_t writeCount;
 
-                        if ( (writeCount = write(socketFileDescriptor, packetBuffer, writeLength)) < 0){
+                        if ( (writeCount = send(socketFileDescriptor,packetBuffer,writeLength,MSG_DONTWAIT)) < 0){
                             if (errno != EWOULDBLOCK && errno != EAGAIN) {
                                 fprintf(stderr, "Cannot write from dest : %s\n", strerror(errno));
                                 finalExit = EXIT_FAILURE;
@@ -234,8 +233,7 @@ int main(int argc, char *argv[]) {
 
                 // on lit ce qu'on a recu
                 ssize_t countRead;
-
-                if ((countRead = read(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE)) < 0 ) {
+                if ((countRead = recv(socketFileDescriptor,receivedBuffer,MAX_PACKET_RECEIVED_SIZE,MSG_DONTWAIT)) < 0 ) {
                     if (errno != EWOULDBLOCK && errno != EAGAIN) {
                         fprintf(stderr, "Cannot read from dest : %s\n", strerror(errno));
                         finalExit = EXIT_FAILURE;

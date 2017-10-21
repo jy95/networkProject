@@ -65,8 +65,7 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
             time(&start_t);
 
             ssize_t writeCount;
-
-            if ( (writeCount = write(sfd, sendBuf, length)) < 0){
+            if ( (writeCount = send(sfd,sendBuf,length,MSG_DONTWAIT)) < 0){
                 if (errno != EWOULDBLOCK && errno != EAGAIN) {
                     fprintf(stderr, "Cannot send empty packet to receiver : %s\n", strerror(errno));
                     result = -1;
@@ -87,7 +86,7 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo) {
                         // lecture du packet
                         ssize_t byte_count;
 
-                        if ( (byte_count = read(sfd,receivedBuf,length)) < 0){
+                        if ( (byte_count = recv(sfd,receivedBuf,length,MSG_DONTWAIT)) < 0){
                             if (errno != EWOULDBLOCK && errno != EAGAIN) {
                                 fprintf(stderr, "Cannot allocate received buffer : %s\n", strerror(errno));
                                 result = -1;
