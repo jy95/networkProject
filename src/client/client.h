@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include "../paquet/packet_interface.h"
+#include "../server_window/server_window_util.h"
 #include "../common/common.h"
 
 #define MAX_LATENCE_TIME    2000 // le temps maximal
@@ -36,5 +37,22 @@ int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo);
 
 // retour la valeur arrrondi en ms de la différence
 int getDiffTimeInMs(time_t * start, time_t * end);
+
+/**
+ * Permet de savoir si notre fenêtre d'envoi (du sender) est pleine
+ * cad qu'il n'est plus possible d'envoyer de nouveaux messages du sender au receiver
+ * @param windowUtil
+ * @return 1 si c'est le cas , 0 sinon
+ */
+int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow);
+
+// check si le numéro de seq dans la window du client
+//unsigned int isInSlidingWindowOfClient(window_util_t *windowUtil, uint8_t seqnum);
+
+// resender les packets dont on a pas recu de ACK
+// iteration dans la sending window
+// On peut sender jusqu'à min(sendingWindow,serverWindow)) les packets pour lesquels on n'a pas recu de ack
+// 0 si pas de soucis , sinon -1
+//int resendAllNotReceivedPackets(window_util_t *windowUtil, int sfd);
 
 #endif //PROJECT_CLIENT_H

@@ -166,36 +166,3 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
     }
 
 }
-
-
-int isSendingWindowFull(window_util_t *windowUtil) {
-
-    // on obtient la taille
-    int windowSize = get_window(windowUtil);
-
-    // si la fenêtre du client est à 0, c'est bloquant
-    if ( windowSize == 0 )
-        return 1;
-
-    uint8_t index = get_first_value_window(windowUtil);
-    // par défaut, y a pas de place
-    int result = 1;
-    // savoir si on doit continuer
-    int shouldContinue = 1;
-    // un counter pour savoir combien d'éléments on doit parcourir
-    int count = 0;
-
-    while (count < windowSize && shouldContinue == 1) {
-
-        // technique en C pour checker si cela est null
-        if ((windowUtil->storedPackets)[index] ) {
-            // on a trouvé un emplacement libre
-            result = 0;
-            // on arrête la boucle
-            shouldContinue--;
-        }
-        index++;
-        count++;
-    }
-    return result;
-}

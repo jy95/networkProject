@@ -43,6 +43,9 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "Socket successfully created - listenning to port %d\n", option_arg->port);
 
+    // set mode non bloquant
+    fcntl(socketFileDescriptor, F_SETFL, O_NONBLOCK);
+
     networkInfo receiverInfo;
     // init de la windows
     window_util_t *windowUtil = new_window_util();
@@ -88,6 +91,10 @@ int main(int argc, char *argv[]) {
     int result;
     int finalExit = EXIT_SUCCESS;
 
+    // numéros de séquences
+    uint8_t SeqNumToBeSent = 0; // le numéro de séquence pour envoyer nos packets
+    uint8_t FirstSeqNumInWindow = 0; // le premier numéro dans la window
+
     // tant que transfer pas fini
     while (transferNotFinished && finalExit != EXIT_SUCCESS) {
 
@@ -95,8 +102,7 @@ int main(int argc, char *argv[]) {
 
         if (result == 0) {
             // timer expiré , on doit resender tous les packets non envoyés
-            // TODO resender les packets de la window
-            sendNotReceivedPackets(sfd, windowUtil);
+            // TODO remove_window_packet
         }
 
         if (result == -1) {
@@ -104,16 +110,18 @@ int main(int argc, char *argv[]) {
             finalExit = EXIT_FAILURE;
         }
 
-        // on a des données sur STDIN (et on veut encore lire)
-        if ((ufds[0].revents & POLLIN) && shouldRead) {
+        // on a des données sur STDIN (et on veut encore lire (et qu'on peut encore envoyer un message)
+        if ((ufds[0].revents & POLLIN) && isSendingWindowFull(windowUtil,FirstSeqNumInWindow) == 0 && shouldRead) {
 
             // on lit et on stocke
-            char receivedBuffer[MAX_PACKET_RECEIVED_SIZE];
+            char receivedBuffer[MAX_PAYLOAD_SIZE];
             ssize_t readCount;
 
-            if ((readCount = read(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE)) == -1 ) {
-                fprintf(stderr, "Cannot read from socket : %s\n", strerror(errno));
-                finalExit = EXIT_FAILURE;
+            if ((readCount = read(STDIN_FILENO, receivedBuffer, MAX_PAYLOAD_SIZE)) < 0 ) {
+                if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                    fprintf(stderr, "Cannot read from STDIN : %s\n", strerror(errno));
+                    finalExit = EXIT_FAILURE;
+                }
             } else {
                 pkt_t *packetToSent = pkt_new();
 
@@ -121,11 +129,37 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Cannot allocate for sending packet\n");
                     finalExit = EXIT_FAILURE;
                 } else {
+
+                    // on construit le packet à envoyer
                     pkt_set_type(packetToSent, PTYPE_DATA);
                     pkt_set_window(packetToSent, get_window(windowUtil));
                     pkt_set_timestamp(packetToSent, time(NULL));
+                    pkt_set_payload(packetToSent, receivedBuffer, readCount);
+                    pkt_set_seqnum(packetToSent, SeqNumToBeSent++); // on incrémente le numéro après
 
-                    // TODO le reste
+                    // on le stocke dans la window , au cas ou on devrait le renvoyer
+                    add_window_packet(windowUtil,packetToSent);
+
+                    // on encode notre packet
+                    char packetBuffer[MAX_PACKET_RECEIVED_SIZE];
+                    pkt_status_code problem;
+                    size_t writeLength = MAX_PACKET_RECEIVED_SIZE;
+                    if ( (problem = pkt_encode(packetToSent,receivedBuffer,&writeLength)) != PKT_OK ) {
+                        fprintf(stderr, "Cannot encode packet : ignored - err code : %d \n",problem);
+                        finalExit = EXIT_FAILURE;
+                    } else {
+                        // on envoit finalement ce packet
+                        ssize_t writeCount;
+
+                        if ( (writeCount = write(socketFileDescriptor, packetBuffer, writeLength)) < 0){
+                            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                                fprintf(stderr, "Cannot write from dest : %s\n", strerror(errno));
+                                finalExit = EXIT_FAILURE;
+                            }
+                        }
+
+                        // TODO le reste ?
+                    }
                 }
 
             }
@@ -150,17 +184,17 @@ int main(int argc, char *argv[]) {
 
                 // on lit ce qu'on a recu
                 ssize_t countRead;
-                socklen_t fromlen = sizeof rval;
 
-                if ((countRead = recvfrom(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE, 0,
-                                          (struct sockaddr *) &rval, &fromlen)) == -1) {
-                    fprintf(stderr, "Cannot recvfrom from dest : %s\n", strerror(errno));
-                    finalExit = EXIT_FAILURE;
+                if ((countRead = read(socketFileDescriptor, receivedBuffer, MAX_PACKET_RECEIVED_SIZE)) < 0 ) {
+                    if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                        fprintf(stderr, "Cannot read from dest : %s\n", strerror(errno));
+                        finalExit = EXIT_FAILURE;
+                    }
                 } else {
 
                     pkt_status_code problem;
                     if ((problem = pkt_decode(receivedBuffer, countRead, receivedPacket)) != PKT_OK) {
-                        fprintf(stderr, "Corrupted Packet : ignored \n");
+                        fprintf(stderr, "Corrupted Packet : ignored - err code : %d \n",problem);
                     } else {
 
                         // calculer le nouveau RTT
@@ -180,10 +214,21 @@ int main(int argc, char *argv[]) {
 
                             uint8_t lastSeqNumReceivedByServer = pkt_get_seqnum(receivedPacket);
 
-                            // on sait désormais que les n packets ont été correctement recues
-                            set_lastReceivedSeqNum(windowUtil, lastSeqNumReceivedByServer);
+                            // TODO supprimer cela
+                            // code bidon pour make
+                            if (lastSeqNumReceivedByServer){
 
-                            // TODO supprimer les packets de la window et la faire avancer
+                            }
+
+                            // TODO Code à continuer
+                            /*
+                            if (isInSlidingWindowOfClient(windowUtil,lastSeqNumReceivedByServer) == 1){
+
+                                // TODO supprimer les packets de la window et la faire avancer
+
+                                // on sait désormais que les n packets jusqu'à ce num ont été correctement envoyés et recues
+                                set_lastReceivedSeqNum(windowUtil, lastSeqNumReceivedByServer);
+                            }*/
 
                         }
 
@@ -205,8 +250,41 @@ int main(int argc, char *argv[]) {
         fclose(fp);
     }
 
-    // TODO on free tout
+    // on free tout
+    free(windowUtil);
 
     return finalExit;
 }
 
+int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow) {
+
+    // on obtient la taille
+    int windowSize = get_window(windowUtil);
+
+    // si la fenêtre du client est à 0, c'est bloquant
+    if ( windowSize == 0 )
+        return 1;
+
+    // on commence
+    uint8_t index = FirstSeqNumInWindow;
+    // par défaut, y a pas de place
+    int result = 1;
+    // savoir si on doit continuer
+    int shouldContinue = 1;
+    // un counter pour savoir combien d'éléments on doit parcourir
+    int count = 0;
+
+    while (count < windowSize && shouldContinue == 1) {
+
+        // technique en C pour checker si cela est null
+        if ((windowUtil->storedPackets)[index]) {
+            // on a trouvé un emplacement libre
+            result = 0;
+            // on arrête la boucle
+            shouldContinue--;
+        }
+        index++;
+        count++;
+    }
+    return result;
+}
