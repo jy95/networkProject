@@ -95,4 +95,4 @@ tests: $(TESTS_SRC); \
 .PHONY: all clean tests
 
 clean:
-	@rm -f $(ALL_OBJ) sender receiver testsScript input_file received_file
+	@rm -f $(ALL_OBJ) sender receiver testsScript input_file received_file *.log

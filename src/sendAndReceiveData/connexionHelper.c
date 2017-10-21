@@ -26,7 +26,7 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     options.ai_family = AF_INET6; // IPV6
     options.ai_socktype = SOCK_DGRAM; // SOCK_DGRAM ou SOCK_STREAM
     options.ai_flags = 0;
-    options.ai_protocol = IPPROTO_UDP;
+    //options.ai_protocol = IPPROTO_UDP;
 
     // on essaye de trouver une adresse
     // service à NULL parce qu'on a pas un numéro de port précis
@@ -47,7 +47,8 @@ const char *real_address(const char *address, struct sockaddr_in6 *rval) {
         //rval = (struct sockaddr_in6 *) result->ai_addr;
 
         // un memccpy pour récupérer les infos dans la structure
-        memcpy (rval, result->ai_addr, result->ai_addrlen);
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)result->ai_addr;
+        memcpy(rval,ipv6,sizeof(*ipv6));
 
         // pour s'assurer que le numéro de port est bien dans l'endianisme de la machine
         rval->sin6_port = htons(rval->sin6_port);
@@ -86,7 +87,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
 
         // un port custom a été demandé
         if (src_port > 0) {
-            source_addr->sin6_port = (in_port_t) src_port;
+            source_addr->sin6_port = htons(src_port);
         }
 
         if (bind(socketFileDescriptor, (struct sockaddr *) source_addr, sizeof(struct sockaddr_in6)) == -1) {
@@ -102,7 +103,7 @@ int create_socket(struct sockaddr_in6 *source_addr,
 
         // un port custom a été demandé
         if (dst_port > 0) {
-            dest_addr->sin6_port = (in_port_t) dst_port;
+            dest_addr->sin6_port = htons(dst_port);
         }
 
         if (connect(socketFileDescriptor, (struct sockaddr *) dest_addr, sizeof(struct sockaddr_in6)) == -1) {
