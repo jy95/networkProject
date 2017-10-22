@@ -167,18 +167,27 @@ int main(int argc, char *argv[]) {
                 && isSendingWindowFull(windowUtil, FirstSeqNumInWindow) == 0
                 && get_window_server(windowUtil) != 0 ) {
 
-                fprintf(stderr,"A new payload is ready to be read from STDIN\n");
-
                 // on lit et on stocke
                 char receivedBuffer[MAX_PAYLOAD_SIZE];
                 ssize_t readCount;
-                if ((readCount = read(STDIN_FILENO, receivedBuffer, MAX_PAYLOAD_SIZE)) < 0 ) {
-                    if ( errno != EWOULDBLOCK && errno != EAGAIN ) {
-                        fprintf(stderr, "\t Cannot read from STDIN : %s\n", strerror(errno));
-                        finalExit = EXIT_FAILURE;
+                if ((readCount = read(STDIN_FILENO, receivedBuffer, MAX_PAYLOAD_SIZE)) <= 0 ) {
+
+                    if (readCount == 0){
+                        // on n'a rien lu et qu'on a tout envoyé ; on est arrivé à la fin
+                        if (sendCounter == 0){
+                            transferNotFinished= 0;
+                        }
+                    } else {
+                        // on a tenté de lire et on bloque
+                        if ( errno != EWOULDBLOCK && errno != EAGAIN ) {
+                            fprintf(stderr, "\t Cannot read from STDIN : %s\n", strerror(errno));
+                            finalExit = EXIT_FAILURE;
+                        }
                     }
                 } else {
                     pkt_t *packetToSent = pkt_new();
+
+                    fprintf(stderr,"A new payload is ready to be read from STDIN\n");
 
                     if ( packetToSent == NULL ) {
                         fprintf(stderr, "\t Cannot allocate for sending packet\n");
@@ -221,8 +230,8 @@ int main(int argc, char *argv[]) {
                                 fprintf(stderr,"\t Packet correctly sent \n");
                                 // on a envoyé un message
                                 sendCounter++;
-                                // on diminue la taille de la window
-                                set_window(windowUtil, get_window(windowUtil) - 1);
+                                // on diminue la taille de la window du receiver: 1 place va être occupé
+                                set_window_server(windowUtil, get_window_server(windowUtil) - 1);
                             }
                         }
                     }
@@ -344,10 +353,14 @@ int main(int argc, char *argv[]) {
 
     }
 
+    fprintf(stderr,"END of transfer\n");
+
     // si on a ouvert le fp
     if ( fp ) {
         fclose(fp);
     }
+
+    // on renvoit le dernier packet au client
 
     // on free tout
     free(windowUtil);

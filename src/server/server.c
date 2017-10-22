@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
             //Recuperation des donnees
 
             if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_RECEIVED_SIZE_FOR_SERVER, 0,
-                              (struct sockaddr *) &rval, &fromsize)) < 0) {
+                              (struct sockaddr *) &rval, &fromsize)) <= 0) {
 
                 if ( errno != EWOULDBLOCK && errno != EAGAIN ) {
                     fprintf(stderr, "Nothing to receive\n"); //On a rien reçu
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
                     // On encode la nouveau paquet
 
                     pkt_status_code err;
-                    if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
+                    if ((err = pkt_encode(newPkt, buff, &len)) != PKT_OK) {
                         fprintf(stderr, "\tError when encoding the response packet - error %d\n", err);
                         if (fp != NULL) fclose(fp);
                         return EXIT_FAILURE;
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
 
 
                     pkt_status_code err;
-                    if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
+                    if ((err = pkt_encode(newPkt, buff, &len)) != PKT_OK) {
                         fprintf(stderr, "Cannot encode response packet error %d :\n", err);
                         if (fp != NULL) fclose(fp);
                         return EXIT_FAILURE;

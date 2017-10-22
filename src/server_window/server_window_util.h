@@ -11,7 +11,7 @@
 #include "../paquet/packet_interface.h"
 #include "../packet_table/packet_table.h"
 
-#define MAX_WINDOW_SIZE 32
+#define MAX_WINDOW_SIZE 31
 #define MAX_STORED_PACKAGES 256
 
 
