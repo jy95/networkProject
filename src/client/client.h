@@ -33,7 +33,7 @@ typedef struct networkInfo {
 
 // pour estimer le RTT et la taille de la window
 // -1 en cas d'erreur ; sinon 0
-int estimateRTTAndWindowSize(int sfd, struct networkInfo * receiverInfo);
+int estimateRTTAndWindowSize(int sfd, networkInfo * receiverInfo);
 
 // retour la valeur arrrondi en ms de la différence
 int getDiffTimeInMs(time_t * start, time_t * end);

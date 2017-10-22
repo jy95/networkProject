@@ -1,6 +1,7 @@
 #include "client.h"
 #include <sys/poll.h>
 #include <time.h>
+#include <sys/time.h>
 #include "../sendAndReceiveData/create_socket.h"
 #include "../sendAndReceiveData/real_address.h"
 #include "../sendAndReceiveData/read_write_loop.h"
@@ -59,7 +60,7 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(stderr, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
-    fprintf(stderr, "Initial window size of receiver : %d ms \n", receiverInfo.windowsReceiver);
+    fprintf(stderr, "Initial window size of receiver : %d \n", receiverInfo.windowsReceiver);
 
     // Step : Envoi de message
 
@@ -69,7 +70,7 @@ int main(int argc, char *argv[]) {
     int transferNotFinished = 1;
 
     // timestamp
-    uint32_t timestamp;
+    //uint32_t timestamp;
 
     // la struct pour poll
     struct pollfd ufds[2];
@@ -97,6 +98,8 @@ int main(int argc, char *argv[]) {
     // tant que transfer pas fini
     while (transferNotFinished && finalExit != EXIT_SUCCESS) {
 
+        struct timeval start_t, end_t;
+
         result = poll(ufds, 2, timer);
 
         //  le timer a expiré et la taille de la window n'est pas 0
@@ -108,6 +111,9 @@ int main(int argc, char *argv[]) {
             int startIndex = FirstSeqNumInWindow;
             int shouldStopResend = 0; // pour arrêter prématurément la boucle
             int resendCounter = 0;
+
+            // set du timer
+            gettimeofday(&start_t,NULL);
 
             // on arrête la boucle si on a un probleme
             while (shouldStopResend == 0 && finalExit != EXIT_SUCCESS){
@@ -243,16 +249,21 @@ int main(int argc, char *argv[]) {
                     } else {
 
                         // calculer le nouveau RTT
-                        uint32_t timestampFromServer = pkt_get_timestamp(receivedPacket);
+                        //uint32_t timestampFromServer = pkt_get_timestamp(receivedPacket);
 
-                        time_t *start = (time_t *) &timestamp;
-                        time_t *end = (time_t *) &timestampFromServer;
+                        //time_t *start = (time_t *) &timestamp;
+                        //time_t *end = (time_t *) &timestampFromServer;
 
-                        uint32_t diffTime = 2 * getDiffTimeInMs(start, end);
+                        //uint32_t diffTime = 2 * getDiffTimeInMs(start, end);
+                        // on obtient le temps actuel
+                        gettimeofday(&end_t,NULL);
+                        int diffTime = (end_t.tv_sec - start_t.tv_sec) * 1000 + (end_t.tv_usec - start_t.tv_usec)/1000;
 
                         // réarmer le timer pour la prochaine itération : T2 - T1 / 2
                         RTT = (RTT + diffTime) / 2;
                         timer = RTT;
+
+                        fprintf(stderr,"\tReceived a packet , takes %d , RTT is : %d \n", diffTime,RTT);
 
                         // on set la taille de la window server
                         set_window_server(windowUtil, pkt_get_window(receivedPacket));

@@ -14,6 +14,7 @@
 #include <stdio.h>  /* FILE */
 #include <stdlib.h> // malloc , etc
 #include <time.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "../client/client.h"
