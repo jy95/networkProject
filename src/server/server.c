@@ -220,6 +220,8 @@ int main(int argc, char *argv[]) {
                     shouldRead = 0;
                 }
 
+                lastSeqAck = seqnumPacket;
+
             }
 
             pkt_del(p);
