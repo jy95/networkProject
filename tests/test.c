@@ -179,6 +179,49 @@ void test_window_add_seqnum_init(void) {
     }
 }
 
+// @set_seqnum_window:test_pkt_decode => [On met le paquet avec seqnum = 0 en stockage puis on applique la méthode printer. Result = dernier seqnum valide = 0 + paquet plus present dans la liste des paquets]
+void test_pkt_decode(void) {
+
+    pkt_t *paquetTest = pkt_new();
+
+    if (!paquetTest) {
+        CU_FAIL("MALLOC FAIL FOR test");
+    }
+
+    pkt_set_type(paquetTest, PTYPE_DATA);
+    pkt_set_tr(paquetTest, 0);
+    pkt_set_window(paquetTest, 5);
+    pkt_set_seqnum(paquetTest, 0);
+    pkt_set_length(paquetTest, 11);
+    pkt_set_timestamp(paquetTest, 0);
+    pkt_set_payload(paquetTest, "hello world", 11);
+
+    char string[27];
+    size_t len = 27;
+    CU_ASSERT_EQUAL(pkt_encode(paquetTest, string, &len), PKT_OK);
+
+
+    pkt_t *newPaquetTest = pkt_new();
+
+    if (!newPaquetTest) {
+        CU_FAIL("MALLOC FAIL FOR test");
+    }
+
+    CU_ASSERT_EQUAL(pkt_decode(string, len, newPaquetTest), PKT_OK);
+
+    CU_ASSERT_EQUAL(pkt_get_type(paquetTest), pkt_get_type(newPaquetTest));
+    CU_ASSERT_EQUAL(pkt_get_tr(paquetTest), pkt_get_tr(newPaquetTest));
+    CU_ASSERT_EQUAL(pkt_get_window(paquetTest), pkt_get_window(newPaquetTest));
+    CU_ASSERT_EQUAL(pkt_get_seqnum(paquetTest), pkt_get_seqnum(newPaquetTest));
+    CU_ASSERT_EQUAL(pkt_get_length(paquetTest), pkt_get_length(newPaquetTest));
+    CU_ASSERT_EQUAL(pkt_get_timestamp(paquetTest), pkt_get_timestamp(newPaquetTest));
+    CU_ASSERT_STRING_EQUAL(pkt_get_payload(paquetTest), pkt_get_payload(newPaquetTest));
+
+
+    pkt_del(newPaquetTest);
+    pkt_del(paquetTest);
+
+}
 
 int main(void) {
 
@@ -253,7 +296,8 @@ int main(void) {
         NULL == CU_add_test(pSuite, "test_window_get_window_server", test_window_get_window_server) ||
         NULL == CU_add_test(pSuite, "test_window_add_seqnum", test_window_add_seqnum) ||
         NULL == CU_add_test(pSuite, "test_window_add_seqnum_NotInWindow", test_window_add_seqnum_NotInWindow) ||
-        NULL == CU_add_test(pSuite, "test_window_add_seqnum_init", test_window_add_seqnum_init)) {
+        NULL == CU_add_test(pSuite, "test_window_add_seqnum_init", test_window_add_seqnum_init) ||
+        NULL == CU_add_test(pSuite, "test_pkt_decode", test_pkt_decode)) {
         CU_cleanup_registry();
         printf("DIE\n");
 
