@@ -50,10 +50,13 @@ int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow);
 // 1, si c'est le cas ; 0 sinon
 unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count);
 
-// resender les packets dont on a pas recu de ACK
-// iteration dans la sending window
-// On peut sender jusqu'à min(sendingWindow,serverWindow)) les packets pour lesquels on n'a pas recu de ack
-// 0 si pas de soucis , sinon -1
-//int resendAllNotReceivedPackets(window_util_t *windowUtil, int sfd);
+// Envoyer un / des messages sur la socket
+void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int * transferNotFinished, int * socketFileDescriptor,window_util_t *windowUtil);
+
+// check si la sliding window est full
+int isSendingWindowFull(window_util_t *windowUtil, uint8_t FirstSeqNumInWindow);
 
 #endif //PROJECT_CLIENT_H
+
+// check si num valide
+unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count);

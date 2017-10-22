@@ -131,6 +131,8 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt) {
         CRC2 = ntohl(CRC2); // on convertit pour avoir la valeur en byte order de notre machine
         crc2Calculated = (uint32_t) crc32(crc2Calculated, (const Bytef *) &payload, length);
 
+        if ( CRC2 != crc2Calculated ) return E_CRC;
+
         packetStatusCode = pkt_set_crc2(pkt, CRC2);
 
         if (packetStatusCode != PKT_OK) return packetStatusCode;
