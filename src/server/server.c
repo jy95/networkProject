@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
             }
 
-            fprintf(stderr,"Received something : check its content\n");
+            fprintf(stderr,"Received message of %d bytes\n", (int) n);
 
             // Recuperation du paquet
 
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
             if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
                 set_window(windowUtil, pkt_get_window(p)); //On recupere la taille de la window du client
 
-                fprintf(stderr,"Received valid PACKET N° %d\n", (int) pkt_get_seqnum(p));
+                fprintf(stderr,"\tReceived valid PACKET N° %d\n", (int) pkt_get_seqnum(p));
 
                 //Bon type de paquet mais tronque
                 if (pkt_get_tr(p) == 1) {
