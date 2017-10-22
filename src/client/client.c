@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
     if (finalExit == EXIT_SUCCESS){
 
         // on renvoit le dernier packet au client
-        sendLastPacket(SeqNumToBeSent,timer,socketFileDescriptor);
+        finalExit = sendLastPacket(SeqNumToBeSent,timer,socketFileDescriptor);
 
     }
 
@@ -251,7 +251,9 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
                             result = -1;
                         } else {
 
-                            if (pkt_get_type(recu) == PTYPE_ACK){
+                            // si c'est celui qu'on attendait
+                            if ( (pkt_get_seqnum(recu) == pkt_get_seqnum(emptyPacket))
+                                 && (pkt_get_type(recu) == PTYPE_ACK) ){
                                 // on a fini
                                 succes = 1;
                                 hasReceivedResponse = 0;
