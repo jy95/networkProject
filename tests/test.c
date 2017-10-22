@@ -143,11 +143,38 @@ void test_window_add_seqnum(void) {
 // @set_seqnum_window:test_window_add_seqnum_NotInWindow => [Le seqnum du paquet n'est pas dans la window, donc : 2]
 void test_window_add_seqnum_NotInWindow(void) {
     pkt_t *pkt1 = pkt_new();
-    if ( !pkt1 ) {
+    if (!pkt1) {
         CU_FAIL("MALLOC FAIL FOR test");
     } else {
         pkt_set_seqnum(pkt1, 2);
         CU_ASSERT_EQUAL(set_seqnum_window(windowUtil, pkt1), 2);
+        pkt_del(pkt1);
+    }
+}
+
+// @set_seqnum_window:test_window_add_seqnum_init => [On met le paquet avec seqnum = 0 en stockage puis on applique la méthode printer. Result = dernier seqnum valide = 0 + paquet plus present dans la liste des paquets]
+void test_window_add_seqnum_init(void) {
+    pkt_t *pkt1 = pkt_new();
+    window_util_t *window_util1 = new_window_util();
+    if (!pkt1 || !window_util1) {
+        CU_FAIL("MALLOC FAIL FOR test");
+    } else {
+        set_window(window_util1, 5);
+
+        pkt_set_payload(pkt1, "Hello world", 11);
+        pkt_set_seqnum(pkt1, 0);
+        pkt_set_length(pkt1, 11);
+
+        CU_ASSERT_EQUAL(set_seqnum_window(window_util1, pkt1), 1);
+        CU_ASSERT_EQUAL(isPresent_seqnum_window(window_util1, 0), 1);
+
+        printer(window_util1, pkt1);
+
+        CU_ASSERT_EQUAL(isPresent_seqnum_window(window_util1, 0), 0);
+        CU_ASSERT_EQUAL(get_lastReceivedSeqNum(window_util1), 0);
+
+
+        del_window_util(window_util1);
         pkt_del(pkt1);
     }
 }
@@ -157,7 +184,7 @@ int main(void) {
 
     //Suite de tests pour les getters
 
-    if ((p = malloc(sizeof(pkt_t))) == NULL ) {
+    if ((p = malloc(sizeof(pkt_t))) == NULL) {
         return EXIT_FAILURE;
     }
 
@@ -225,7 +252,8 @@ int main(void) {
         NULL == CU_add_test(pSuite, "test_window_IsInWindow", test_window_IsInWindow) ||
         NULL == CU_add_test(pSuite, "test_window_get_window_server", test_window_get_window_server) ||
         NULL == CU_add_test(pSuite, "test_window_add_seqnum", test_window_add_seqnum) ||
-        NULL == CU_add_test(pSuite, "test_window_add_seqnum_NotInWindow", test_window_add_seqnum_NotInWindow)) {
+        NULL == CU_add_test(pSuite, "test_window_add_seqnum_NotInWindow", test_window_add_seqnum_NotInWindow) ||
+        NULL == CU_add_test(pSuite, "test_window_add_seqnum_init", test_window_add_seqnum_init)) {
         CU_cleanup_registry();
         printf("DIE\n");
 
