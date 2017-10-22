@@ -106,8 +106,9 @@ int main(int argc, char *argv[]) {
             int isIgnore = 0;
 
             // on decode le buffer
-            if (pkt_decode(buffer, (const size_t) n, p) != PKT_OK) {
-                fprintf(stderr, "\tCould not decode the packet\n"); //Erreur lors de la conversion du buffer en paquet
+            pkt_status_code problem;
+            if ( (problem = pkt_decode(buffer, (const size_t) n, p)) != PKT_OK) {
+                fprintf(stderr, "\tCould not decode the packet - errcode : %d \n", problem); //Erreur lors de la conversion du buffer en paquet
                 isIgnore = 1;
             }
 
