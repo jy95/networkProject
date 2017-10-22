@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         //Recuperation des donnees
         if ((n = recvfrom(socketFileDescriptor, buffer, MAX_PACKET_WINDOW_SIZE * MAX_WINDOW_SIZE, 0,
                           (struct sockaddr *) &rval, &fromsize)) < 0) {
-            fprintf(stderr, "Nothing to receive"); //On a rien reçu
+            fprintf(stderr, "Nothing to receive\n"); //On a rien reçu
             if (fp != NULL) fclose(fp);
             return EXIT_FAILURE;
         }
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
         // on decode le buffer
         if (pkt_decode(buffer, (const size_t) n, p) != PKT_OK) {
-            fprintf(stderr, "Could not decode the packet"); //Erreur lors de la conversion du buffer en paquet
+            fprintf(stderr, "Could not decode the packet\n"); //Erreur lors de la conversion du buffer en paquet
             isIgnore = 1;
         }
 
@@ -106,6 +106,8 @@ int main(int argc, char *argv[]) {
 
                 // Creation du nouveau paquet
 
+                fprintf(stderr,"\tThis packet was truncated\n");
+
                 pkt_t *newPkt = pkt_new();
                 if (newPkt == NULL) {
                     if (fp != NULL) fclose(fp);
@@ -126,7 +128,7 @@ int main(int argc, char *argv[]) {
 
                 pkt_status_code err;
                 if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
-                    fprintf(stderr, "Error when encoding the response packet - error %d :", err);
+                    fprintf(stderr, "\tError when encoding the response packet - error %d\n", err);
                     if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
@@ -134,7 +136,7 @@ int main(int argc, char *argv[]) {
                 // On envoie le paquet au client
 
                 if (sendto(socketFileDescriptor, buff, len, 0, (struct sockaddr *) &rval, fromsize) < 0) {
-                    fprintf(stderr, "Error when sending error"); //Erreur lors de l'envoi des donnees
+                    fprintf(stderr, "\tError when sending the response packet\n"); //Erreur lors de l'envoi des donnees
                     if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
@@ -143,7 +145,7 @@ int main(int argc, char *argv[]) {
             } else if (pkt_get_tr(p) == 0 && isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1) {
 
                 //On cree le nouveau paquet
-
+                fprintf(stderr,"\tThis packet is not truncated\n");
                 pkt_t *newPkt = pkt_new();
                 if (newPkt == NULL) {
                     if (fp != NULL) fclose(fp);
@@ -151,6 +153,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
+                    fprintf(stderr,"\tDistribution of packets payload to stdout\n");
                     set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                     printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
                 } else {
@@ -172,7 +175,7 @@ int main(int argc, char *argv[]) {
 
                 pkt_status_code err;
                 if ((err = pkt_encode(p, buff, &len)) != PKT_OK) {
-                    fprintf(stderr, "encode error %d :", err);
+                    fprintf(stderr, "encode error %d :\n", err);
                     if (fp != NULL) fclose(fp);
                     return EXIT_FAILURE;
                 }
