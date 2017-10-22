@@ -216,6 +216,10 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
+                if(seqnumPacket == lastSeqAck && lengthReceivedPacket == 0) {
+                    shouldRead = 0;
+                }
+
             }
 
             pkt_del(p);
