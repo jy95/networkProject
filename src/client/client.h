@@ -51,7 +51,8 @@ int isSendingWindowFull(window_util_t *windowUtil,uint8_t FirstSeqNumInWindow);
 unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count);
 
 // Envoyer un / des messages sur la socket
-void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int * transferNotFinished, int * socketFileDescriptor,window_util_t *windowUtil);
+void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,
+                 int * transferNotFinished, int * socketFileDescriptor,window_util_t *windowUtil);
 
 // check si la sliding window est full
 int isSendingWindowFull(window_util_t *windowUtil, uint8_t FirstSeqNumInWindow);
@@ -60,3 +61,7 @@ int isSendingWindowFull(window_util_t *windowUtil, uint8_t FirstSeqNumInWindow);
 
 // check si num valide
 unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count);
+
+// resend de packets non correctement recus
+void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * FirstSeqNumInWindow,
+                        int * socketFileDescriptor,int * timer,int *finalExit,struct timeval * start_t );
