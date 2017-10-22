@@ -216,7 +216,9 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
+                // On a fini le transfer
                 if(seqnumPacket == lastSeqAck && lengthReceivedPacket == 0) {
+                    fprintf(stderr,"End of transfer\n");
                     shouldRead = 0;
                 }
 
