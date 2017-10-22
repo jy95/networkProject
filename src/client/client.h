@@ -65,3 +65,9 @@ unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count)
 // resend de packets non correctement recus
 void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * FirstSeqNumInWindow,
                         int * socketFileDescriptor,int * timer,int *finalExit,struct timeval * start_t );
+
+// reception des messages
+void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t ,
+                      int * RTT, int * timer,  int * finalExit ,
+                      int * socketFileDescriptor, window_util_t *windowUtil ,
+                      int * sendCounter, uint8_t * FirstSeqNumInWindow );
