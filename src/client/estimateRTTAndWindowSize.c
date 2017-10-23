@@ -35,7 +35,7 @@ int estimateRTTAndWindowSize(int sfd, networkInfo *receiverInfo) {
     pkt_set_seqnum(emptyPacket, 1);
     pkt_set_type(emptyPacket, PTYPE_DATA);
     pkt_set_window(emptyPacket, DEFAULT_CLIENT_WINDOW_SIZE);
-    pkt_set_tr(emptyPacket, 1);
+    pkt_set_tr(emptyPacket, 0); // faux packet ne doit pas setter ce flag
     pkt_set_length(emptyPacket, 0);
 
     // pour envoyer un seul message

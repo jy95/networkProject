@@ -54,10 +54,14 @@ int main(int argc, char *argv[]) {
     }
 
     // Step : Calculer le RTT initial pour envoyer un packet (en théorie, doit être recalculé à chaque réception de (N)ACK)
+    /*
     if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1 ) {
         fprintf(stderr, "Cannot estimate RTT and Window size of receiver\n");
         return EXIT_FAILURE;
-    }
+    }*/
+    // set de base
+    receiverInfo.RTT = 2 * MAX_LATENCE_TIME; // temps par défaut
+    receiverInfo.windowsReceiver = 1; // on considère la taille de la window par défaut par défaut
 
     fprintf(stderr, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
     fprintf(stderr, "Initial window size of receiver : %d \n", receiverInfo.windowsReceiver);
