@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
     socklen_t fromsize = sizeof rval;
 
     int lengthReceivedPacket = 1;
-    int seqnumPacket = -1;
-    int lastSeqAck = -1;
+    uint8_t seqnumPacket = 255;
+    uint8_t lastSeqAck = 255;
     int shouldRead = 1;
 
     window_util_t *windowUtil = new_window_util();
@@ -179,18 +179,26 @@ int main(int argc, char *argv[]) {
                         return EXIT_FAILURE;
                     }
 
-                    if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
+                    if ((uint8_t) (get_lastReceivedSeqNum(windowUtil) + 1) == seqnumPacket) {
                         fprintf(stderr,"\tDistribution of packets payload to stdout\n");
                         set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                         printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
                     } else {
-                        fprintf(stderr,"\tStored this packed for later\n");
-                        add_window_packet(windowUtil, p); //On stocke le paquet au frais
+                        fprintf(stderr,"\tStored this packed for later...\n");
+                        int response = set_seqnum_window(windowUtil, p); //On stocke le paquet au frais
+
+                        if(response == 1) {
+                            fprintf(stderr,"\tthe packet is successfully stored\n");
+                        } else if(response == 2) {
+                            fprintf(stderr,"\tthe packet not stored because the window is full or we are not in the sliding window\n");
+                        } else {
+                            fprintf(stderr,"\tthe packet was already stored\n");
+                        }
                     }
 
                     pkt_set_type(newPkt, PTYPE_ACK);
                     pkt_set_tr(newPkt, 0);
-                    pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) % MAX_STORED_PACKAGES));
+                    pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) + 1));
                     pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
                     pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
 
