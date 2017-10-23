@@ -140,9 +140,11 @@ int set_seqnum_window(window_util_t *windowUtil, pkt_t *p) {
 void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
     uint8_t seqnum = pkt_get_seqnum(first_pkt);
 
-    if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnum && isInSlidingWindow(windowUtil, seqnum)) {
+    if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnum && isInSlidingWindow(windowUtil, seqnum) ) {
+        if(pkt_get_length(first_pkt) > 0) {
+            fwrite(pkt_get_payload(first_pkt), pkt_get_length(first_pkt), 1, stdout);
 
-        fwrite(pkt_get_payload(first_pkt), pkt_get_length(first_pkt), 1, stdout);
+        }
 
         set_lastReceivedSeqNum(windowUtil, seqnum);
         unset_seqAck(windowUtil, seqnum);
@@ -154,7 +156,9 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
         while (isInSlidingWindow(windowUtil, seqnum) && get_first_value_window(windowUtil) == 1) {
 
             p = removeElem(windowUtil->storedPackets, seqnum); // On retire l'element de la liste des paquets
-            fprintf(stdout, "%s", pkt_get_payload(p)); // on print le payload du paquet
+            if(pkt_get_length(p) > 0) {
+                fwrite(pkt_get_payload(p), pkt_get_length(p), 1, stdout); // on print le payload du paquet
+            }
             set_lastReceivedSeqNum(windowUtil, seqnum); //On decale la window
             unset_seqAck(windowUtil, seqnum); // On retire la presence du paquet dans la liste des numero de sequence valide
             uint8_t window_server = get_window_server(windowUtil);

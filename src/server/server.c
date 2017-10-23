@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
             lengthReceivedPacket = pkt_get_length(p);
             seqnumPacket = pkt_get_seqnum(p);
 
-            int test1 = (lengthReceivedPacket >= 1 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
+            int test1 = (lengthReceivedPacket >= 0 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
             int test2 = isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1; //On est dans la sliding window
 
             fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2);
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     pkt_set_type(newPkt, PTYPE_NACK);
-                    pkt_set_tr(newPkt, 1);
+                    pkt_set_tr(newPkt, 0);
                     pkt_set_seqnum(newPkt, pkt_get_seqnum(p));
                     pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
                     pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
