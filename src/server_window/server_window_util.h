@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include "../paquet/packet_interface.h"
 #include "../packet_table/packet_table.h"
+#include <sys/time.h> // pour les timers
 
 #define MAX_WINDOW_SIZE 31
 #define MAX_STORED_PACKAGES 256
@@ -24,6 +25,7 @@ typedef struct window_util {
     uint8_t window_server; //On stocke le window du serveur
     uint8_t window; //On stocke le window du client
     unsigned int seqAck[256];
+    struct timeval * timers[256]; // tous les timers
 } window_util_t;
 
 /**

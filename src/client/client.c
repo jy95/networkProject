@@ -111,10 +111,6 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Problem with poll\n");
             finalExit = EXIT_FAILURE;
         } else if ( result == 0 ) {
-            // fin du timer
-            // renvoyer les messages dont on n'a pas recu de ACK
-            resendLostMessages(windowUtil,&sendCounter,&FirstSeqNumInWindow,
-                               &socketFileDescriptor,&timer,&finalExit,&start_t);
 
         } else {
             // un ou deux file descriptors sont actifs
@@ -140,6 +136,11 @@ int main(int argc, char *argv[]) {
             }
 
         }
+
+        // fin du timer probable : check de timers
+        // renvoyer les messages dont on n'a pas recu de ACK
+        resendLostMessages(windowUtil,&sendCounter,&FirstSeqNumInWindow,
+                           &socketFileDescriptor,&timer,&finalExit);
     }
 
 

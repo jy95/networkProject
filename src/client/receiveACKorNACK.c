@@ -72,6 +72,7 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
                             pkt_t *packetToBeRemoved = remove_window_packet(windowUtil, deleteIndex);
                             if ( packetToBeRemoved != NULL ) {
                                 free(packetToBeRemoved);
+                                free((windowUtil->timers)[deleteIndex]); // suppression du timer
                             }
                             // on décrémente le nombre de packets envoyés (puisque le receiver a recu le packet)
                             sendCounter--;
@@ -80,15 +81,15 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
                             set_window(windowUtil, get_window(windowUtil) + 1);
 
                             // quand on s'arrête
-                            if ( deleteIndex == seqNumToCheck ) {
+                            if ( deleteIndex == seqNumToCheck - 1 ) {
                                 shouldStopRemove++;
                             }
                             deleteIndex++;
                         }
 
-                        // on sait désormais que les n packets jusqu'à ce num ont été correctement envoyés et recues
-                        // le premier numéro dans la window devient donc seqNumToCheck +1
-                        *FirstSeqNumInWindow = (seqNumToCheck + 1);
+                        // on sait désormais que les n packets jusqu'à ce num (non inclus) ont été correctement envoyés et recues
+                        // le premier numéro dans la window devient donc seqNumToCheck
+                        *FirstSeqNumInWindow = (seqNumToCheck);
                     }
 
                 }
