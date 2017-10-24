@@ -75,7 +75,7 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
                                 free((windowUtil->timers)[deleteIndex]); // suppression du timer
                             }
                             // on décrémente le nombre de packets envoyés (puisque le receiver a recu le packet)
-                            sendCounter--;
+                            (*sendCounter)--;
 
                             // on incrémente la taille de notre window (puisqu'on a une nouvelle place libre)
                             set_window(windowUtil, get_window(windowUtil) + 1);

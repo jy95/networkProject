@@ -84,11 +84,14 @@ int main(int argc, char *argv[]) {
     uint8_t SeqNumToBeSent = 0; // le numéro de séquence pour envoyer nos packets
     uint8_t FirstSeqNumInWindow = 0; // le premier numéro dans la window
 
+    // timers
+    // TODO
+
     // nombre de packets envoyés
     int sendCounter = 0;
 
     // tant que transfer pas fini ou une erreur s'est produite
-    while (transferNotFinished && finalExit == EXIT_SUCCESS) {
+    while (transferNotFinished && finalExit == EXIT_SUCCESS && windowUtil != NULL ) {
 
         struct timeval start_t, end_t;
 
@@ -119,7 +122,7 @@ int main(int argc, char *argv[]) {
 
             if ((ufds[0].revents & POLLIN)
                 && isSendingWindowFull(windowUtil, FirstSeqNumInWindow) == 0
-                && get_window_server(windowUtil) != 0 ) {
+                && sendCounter < get_window_server(windowUtil) ) {
 
                 // on envoit un message
                 sendMessage(&sendCounter, &finalExit, &SeqNumToBeSent,
@@ -161,6 +164,7 @@ int main(int argc, char *argv[]) {
 
     // on free tout
     free(windowUtil);
+    free(option_arg);
 
     return finalExit;
 }

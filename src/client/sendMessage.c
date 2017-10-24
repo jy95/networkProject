@@ -7,7 +7,7 @@
 void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int * transferNotFinished, int * socketFileDescriptor,window_util_t *windowUtil){
     // on lit et on stocke
     char receivedBuffer[MAX_PAYLOAD_SIZE];
-    ssize_t readCount;
+    int readCount;
     if ((readCount = read(STDIN_FILENO, receivedBuffer, MAX_PAYLOAD_SIZE)) <= 0 ) {
 
         if ( readCount == 0 ) {
@@ -37,7 +37,7 @@ void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int
             pkt_set_type(packetToSent, PTYPE_DATA);
             pkt_set_window(packetToSent, get_window(windowUtil));
             pkt_set_timestamp(packetToSent, time(NULL));
-            pkt_set_payload(packetToSent, receivedBuffer, (uint16_t) readCount);
+            pkt_set_payload(packetToSent, receivedBuffer, readCount);
             pkt_set_seqnum(packetToSent, (*SeqNumToBeSent)++); // on incrémente le numéro après
 
             // on le stocke dans la window , au cas ou on devrait le renvoyer
@@ -50,7 +50,7 @@ void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int
             char packetBuffer[MAX_PACKET_RECEIVED_SIZE];
             pkt_status_code problem;
             size_t writeLength = MAX_PACKET_RECEIVED_SIZE;
-            if ((problem = pkt_encode(packetToSent, receivedBuffer, &writeLength)) != PKT_OK ) {
+            if ((problem = pkt_encode(packetToSent, packetBuffer, &writeLength)) != PKT_OK ) {
                 fprintf(stderr, "\t Cannot encode packet : ignored - err code : %d \n", problem);
                 *finalExit = EXIT_FAILURE;
             } else {

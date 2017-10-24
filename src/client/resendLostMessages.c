@@ -9,17 +9,18 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
     // timer expiré , on doit resender tous les packets non envoyés
     // pour savoir combien de paquets on peut renvoyer à receiver
 
-    if ( get_window_server(windowUtil) != 0 ) {
-        int maxSendCounter = (*sendCounter < get_window_server(windowUtil)) ? *sendCounter : get_window_server(
+    int maxSendCounter = (*sendCounter < get_window_server(windowUtil)) ? *sendCounter : get_window_server(
                 windowUtil);
-        fprintf(stderr, "\t resend  %d packet(s)\n", maxSendCounter);
+
+    if (maxSendCounter > 0) {
+        fprintf(stderr, "Timeout - It should resend %d packet(s)\n", maxSendCounter);
         // à partir de quel packet on send tout cela
         int startIndex = *FirstSeqNumInWindow;
         int shouldStopResend = 0; // pour arrêter prématurément la boucle
         int resendCounter = 0;
 
         // on arrête la boucle si on a un probleme
-        while (shouldStopResend == 0 && *finalExit != EXIT_SUCCESS) {
+        while (shouldStopResend == 0 && *finalExit == EXIT_SUCCESS) {
             pkt_t *packetToBeResend = get_window_packet(windowUtil, startIndex);
 
             // set du timer
@@ -35,6 +36,7 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
                     (end_t.tv_sec - start_t.tv_sec) * 1000 + (end_t.tv_usec - start_t.tv_usec) / 1000;
 
             if ( (diffTime > *timer) && packetToBeResend != NULL ) {
+                fprintf(stderr,"\t Packet N°%d must be resend - DELAY %d\n",pkt_get_seqnum(packetToBeResend),diffTime);
                 char packetBuffer[MAX_PAYLOAD_SIZE];
                 size_t writeLength = MAX_PAYLOAD_SIZE;
                 pkt_status_code problem;
