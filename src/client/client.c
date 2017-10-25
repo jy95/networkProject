@@ -84,8 +84,7 @@ int main(int argc, char *argv[]) {
     uint8_t SeqNumToBeSent = 0; // le numéro de séquence pour envoyer nos packets
     uint8_t FirstSeqNumInWindow = 0; // le premier numéro dans la window
 
-    // timers
-    // TODO
+    fprintf(stderr,"Enter your message; CRTL-D for EOF\n");
 
     // nombre de packets envoyés
     int sendCounter = 0;

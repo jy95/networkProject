@@ -48,7 +48,7 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
                 *RTT = (*RTT + diffTime) / 2;
                 *timer = *RTT;
 
-                fprintf(stderr, "\tReceived a packet , takes %d , RTT is : %d \n", diffTime, *RTT);
+                fprintf(stderr, "\t Received a packet , takes %d , RTT is : %d \n", diffTime, *RTT);
 
                 // on set la taille de la window server
                 set_window_server(windowUtil, pkt_get_window(receivedPacket));
@@ -58,10 +58,10 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
 
                     uint8_t seqNumToCheck = pkt_get_seqnum(receivedPacket);
                     fprintf(stderr, "RECEIVED : ACK with seqNum : %d \n", seqNumToCheck);
-
                     // On checke s'il est bien dans la sliding window
                     if ( isInSlidingWindowOfClient(seqNumToCheck, *FirstSeqNumInWindow, *sendCounter) == 1 ) {
 
+                        fprintf(stderr, "\t Packets between %d and %d (not included) received \n", *FirstSeqNumInWindow, seqNumToCheck);
                         // supprimer les packets de la window et la faire avancer
                         uint8_t deleteIndex = *FirstSeqNumInWindow;
                         int shouldStopRemove = 0; // stop remove when reach
