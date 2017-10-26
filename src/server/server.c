@@ -37,7 +37,6 @@ int main(int argc, char *argv[]) {
 
     int lengthReceivedPacket = 1;
     uint8_t seqnumPacket = 255;
-    uint8_t lastSeqAck = 255;
     int shouldRead = 1;
 
     window_util_t *windowUtil = new_window_util();
@@ -116,14 +115,14 @@ int main(int argc, char *argv[]) {
 
             lengthReceivedPacket = pkt_get_length(p);
             seqnumPacket = pkt_get_seqnum(p);
-
+            int receivedInSeq = 0; // par défaut, on considère qu'on pas recu en séquence; 1 sinon
             int test1 = (lengthReceivedPacket >= 0 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
             int test2 = isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1; //On est dans la sliding window
 
             fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1) && pkt_get_type(p) == PTYPE_DATA && test2);
 
             // Le paquet n'est pas ignore + seqnumPacket != lastSeqAck + 1 <= length <= 512 + paquet = DATA
-            if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
+            if (isIgnore == 0 && test1 && pkt_get_type(p) == PTYPE_DATA && test2) {
                 set_window(windowUtil, pkt_get_window(p)); //On recupere la taille de la window du client
 
                 fprintf(stderr,"\tReceived valid PACKET N° %d\n", (int) pkt_get_seqnum(p));
@@ -183,6 +182,7 @@ int main(int argc, char *argv[]) {
                         fprintf(stderr,"\tDistribution of packets payload to stdout\n");
                         set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                         printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
+                        receivedInSeq = 1; // on sait qu'ici on a recu tout dans l'ordre
                     } else {
                         fprintf(stderr,"\tStored this packed for later...\n");
                         int response = set_seqnum_window(windowUtil, p); //On stocke le paquet au frais
@@ -225,12 +225,11 @@ int main(int argc, char *argv[]) {
                 }
 
                 // On a fini le transfer
-                if(seqnumPacket == lastSeqAck && lengthReceivedPacket == 0) {
+                if(receivedInSeq == 1 && lengthReceivedPacket == 0) {
                     fprintf(stderr,"End of transfer\n");
                     shouldRead = 0;
                 }
 
-                lastSeqAck = seqnumPacket;
 
             }
 
