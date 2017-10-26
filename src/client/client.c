@@ -245,7 +245,7 @@ int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd){
                 if ( ufds[0].revents & POLLIN ) {
 
                     // lecture du packet
-                    ssize_t byte_count;
+                    int byte_count;
 
                     if ((byte_count = recv(sfd, receivedBuf, length, MSG_DONTWAIT)) < 0 ) {
                         if ( errno != EWOULDBLOCK && errno != EAGAIN ) {
@@ -260,11 +260,12 @@ int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd){
                         } else {
 
                             // si c'est celui qu'on attendait
-                            if ( (pkt_get_seqnum(recu) == pkt_get_seqnum(emptyPacket))
+                            if ( (pkt_get_seqnum(recu) == (SeqNumToBeSent +1))
                                  && (pkt_get_type(recu) == PTYPE_ACK) ){
                                 // on a fini
                                 succes = 1;
                                 hasReceivedResponse = 0;
+                                fprintf(stderr,"The receiver has received the end of transfer packet\n");
                             }
                         }
                     }
@@ -274,8 +275,7 @@ int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd){
         }
 
     }
-
-    if (succes) {
+    if (succes != 1) {
         return EXIT_FAILURE;
     } else {
         return EXIT_SUCCESS;

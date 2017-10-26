@@ -15,7 +15,7 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
     if (maxSendCounter > 0) {
         fprintf(stderr, "Timeout - It should resend %d packet(s)\n", maxSendCounter);
         // à partir de quel packet on send tout cela
-        int startIndex = *FirstSeqNumInWindow;
+        uint8_t startIndex = *FirstSeqNumInWindow;
         int shouldStopResend = 0; // pour arrêter prématurément la boucle
         int resendCounter = 0;
 

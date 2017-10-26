@@ -56,7 +56,7 @@ void receiveACKorNACK(struct timeval *end_t, int *RTT, int *timer, int *finalExi
                     *RTT = (*RTT + diffTime) / 2;
                     *timer = *RTT;
 
-                    fprintf(stderr, "Received a valid packet - (ACK or NACK) %d , takes %d , RTT is : %d \n",seqNumToCheck, diffTime, *RTT);
+                    fprintf(stderr, "Received a valid packet - (ACK or NACK) %d , takes %d ms , RTT is : %d ms \n",seqNumToCheck, diffTime, *RTT);
 
                     // on set la taille de la window server
                     set_window_server(windowUtil, pkt_get_window(receivedPacket));
