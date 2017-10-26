@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     // tant que transfer pas fini ou une erreur s'est produite
     while (transferNotFinished && finalExit == EXIT_SUCCESS && windowUtil != NULL ) {
 
-        struct timeval start_t, end_t;
+        struct timeval end_t;
 
         // la struct pour poll
         struct pollfd ufds[2];
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
             if ( ufds[1].revents & POLLIN ) {
 
                 // on receptionne un ACK ou NACK
-                receiveACKorNACK(&end_t,&start_t,&RTT,&timer,&finalExit,
+                receiveACKorNACK(&end_t,&RTT,&timer,&finalExit,
                                  &socketFileDescriptor,windowUtil,&sendCounter,&FirstSeqNumInWindow);
 
             }
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     return finalExit;
 }
 
-int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
+int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd){
     // on crée le packet qui va signaler la fin du transfer
     pkt_t *emptyPacket = pkt_new();
 
@@ -184,7 +184,7 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
         return EXIT_FAILURE;
 
     // init du dernier packet
-    pkt_set_seqnum(emptyPacket, SeqNumToBeSent - 1 );
+    pkt_set_seqnum(emptyPacket, SeqNumToBeSent);
     pkt_set_type(emptyPacket, PTYPE_DATA);
     pkt_set_window(emptyPacket, 1); // on ne veut être notifié
     pkt_set_length(emptyPacket, 0); // un packet vide

@@ -4,8 +4,9 @@
 #include "client.h"
 #include <errno.h>
 
-void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * RTT, int * timer,  int * finalExit ,
-                      int * socketFileDescriptor, window_util_t *windowUtil , int * sendCounter, uint8_t * FirstSeqNumInWindow ) {
+void receiveACKorNACK(struct timeval *end_t, int *RTT, int *timer, int *finalExit,
+                      int *socketFileDescriptor, window_util_t *windowUtil, int *sendCounter,
+                      uint8_t *FirstSeqNumInWindow) {
 
     pkt_t *receivedPacket = pkt_new();
 
@@ -40,28 +41,31 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
 
                 //uint32_t diffTime = 2 * getDiffTimeInMs(start, end);
                 // on obtient le temps actuel
+                uint8_t seqNumToCheck = pkt_get_seqnum(receivedPacket);
                 gettimeofday(end_t, NULL);
-                int diffTime =
-                        (end_t->tv_sec - start_t->tv_sec) * 1000 + (end_t->tv_usec - start_t->tv_usec) / 1000;
+                // On checke s'il est bien dans la sliding window
+                if ( isInSlidingWindowOfClient(seqNumToCheck, *FirstSeqNumInWindow, *sendCounter) == 1 ) {
 
-                // réarmer le timer pour la prochaine itération : T2 - T1 / 2
-                *RTT = (*RTT + diffTime) / 2;
-                *timer = *RTT;
+                    // on suppose qu'il existe puisque déjà envoyé ; seqNumToCheck -1 pour le dernier envoyé
+                    struct timeval * start_t = ((windowUtil->timers)[seqNumToCheck -1]);
 
-                fprintf(stderr, "\t Received a packet , takes %d , RTT is : %d \n", diffTime, *RTT);
+                    int diffTime =
+                            (end_t->tv_sec - start_t->tv_sec) * 1000 + (end_t->tv_usec - start_t->tv_usec) / 1000;
 
-                // on set la taille de la window server
-                set_window_server(windowUtil, pkt_get_window(receivedPacket));
+                    // réarmer le timer pour la prochaine itération : T2 - T1 / 2
+                    *RTT = (*RTT + diffTime) / 2;
+                    *timer = *RTT;
 
-                // On ne s'intéresse qu'aux packet de type ACK
-                if ( pkt_get_type(receivedPacket) == PTYPE_ACK ) {
+                    fprintf(stderr, "Received a valid packet - (ACK or NACK) %d , takes %d , RTT is : %d \n",seqNumToCheck, diffTime, *RTT);
 
-                    uint8_t seqNumToCheck = pkt_get_seqnum(receivedPacket);
-                    fprintf(stderr, "RECEIVED : ACK with seqNum : %d \n", seqNumToCheck);
-                    // On checke s'il est bien dans la sliding window
-                    if ( isInSlidingWindowOfClient(seqNumToCheck, *FirstSeqNumInWindow, *sendCounter) == 1 ) {
+                    // on set la taille de la window server
+                    set_window_server(windowUtil, pkt_get_window(receivedPacket));
 
-                        fprintf(stderr, "\t Packets between %d and %d (not included) received \n", *FirstSeqNumInWindow, seqNumToCheck);
+                    // On ne s'intéresse qu'aux packet de type ACK
+                    if ( pkt_get_type(receivedPacket) == PTYPE_ACK ) {
+
+                        fprintf(stderr, "\t Packets between %d and %d (not included) received \n", *FirstSeqNumInWindow,
+                                seqNumToCheck);
                         // supprimer les packets de la window et la faire avancer
                         uint8_t deleteIndex = *FirstSeqNumInWindow;
                         int shouldStopRemove = 0; // stop remove when reach
@@ -90,15 +94,15 @@ void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t , int * R
                         // on sait désormais que les n packets jusqu'à ce num (non inclus) ont été correctement envoyés et recues
                         // le premier numéro dans la window devient donc seqNumToCheck
                         *FirstSeqNumInWindow = (seqNumToCheck);
+
                     }
 
-                }
+                    // Si on recoit un packet de type NACK ; on sait que le réseau est congestionné
+                    if ( pkt_get_type(receivedPacket) == PTYPE_NACK ) {
 
-                // Si on recoit un packet de type NACK ; on sait que le réseau est congestionné
-                if ( pkt_get_type(receivedPacket) == PTYPE_NACK ) {
-
-                    // de ce fait, on réduit notre window
-                    set_window(windowUtil, get_window(windowUtil) - 1);
+                        // de ce fait, on réduit notre window
+                        set_window(windowUtil, get_window(windowUtil) - 1);
+                    }
                 }
 
             }

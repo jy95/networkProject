@@ -67,10 +67,10 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
                         int * socketFileDescriptor,int * timer,int *finalExit);
 
 // reception des messages
-void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t ,
+void receiveACKorNACK(struct timeval * end_t,
                       int * RTT, int * timer,  int * finalExit ,
                       int * socketFileDescriptor, window_util_t *windowUtil ,
                       int * sendCounter, uint8_t * FirstSeqNumInWindow );
 
 // envoi du dernier packet
-int sendLastPacket(int SeqNumToBeSent,int timer, int sfd);
+int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd);
