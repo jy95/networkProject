@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
             int test1 = (lengthReceivedPacket >= 0 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
             int test2 = isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1; //On est dans la sliding window
 
-            fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2);
+            fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1) && pkt_get_type(p) == PTYPE_DATA && test2);
 
             // Le paquet n'est pas ignore + seqnumPacket != lastSeqAck + 1 <= length <= 512 + paquet = DATA
             if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
@@ -242,6 +242,9 @@ int main(int argc, char *argv[]) {
 
     del_window_util(windowUtil);
 
+
     if (fp != NULL) fclose(fp);
+    fprintf(stderr, "Server done\n"); //Erreur lors de l'envoi des donnees
+
     return EXIT_SUCCESS;
 }
