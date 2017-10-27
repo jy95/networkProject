@@ -180,8 +180,8 @@ int main(int argc, char *argv[]) {
 
                     if ((uint8_t) (get_lastReceivedSeqNum(windowUtil) + 1) == seqnumPacket) {
                         fprintf(stderr,"\tDistribution of packets payload to stdout\n");
-                        set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                         printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
+                        set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                         receivedInSeq = 1; // on sait qu'ici on a recu tout dans l'ordre
                     } else {
                         fprintf(stderr,"\tStored this packed for later...\n");
