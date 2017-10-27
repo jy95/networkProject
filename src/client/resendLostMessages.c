@@ -13,14 +13,11 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
                 windowUtil);
 
     if (maxSendCounter > 0) {
-        fprintf(stderr, "Timeout - It should resend %d packet(s)\n", maxSendCounter);
-        // à partir de quel packet on send tout cela
         uint8_t startIndex = *FirstSeqNumInWindow;
-        int shouldStopResend = 0; // pour arrêter prématurément la boucle
         int resendCounter = 0;
+        int processed = 0; // éléments déjà traités
 
-        // on arrête la boucle si on a un probleme
-        while (shouldStopResend == 0 && *finalExit == EXIT_SUCCESS) {
+        while (resendCounter <= maxSendCounter && processed < *sendCounter && *finalExit == EXIT_SUCCESS) {
             pkt_t *packetToBeResend = get_window_packet(windowUtil, startIndex);
 
             // set du timer
@@ -37,8 +34,8 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
 
             if ( (diffTime > *timer) && packetToBeResend != NULL ) {
                 fprintf(stderr,"\t Packet N°%d must be resend - DELAY %d\n",pkt_get_seqnum(packetToBeResend),diffTime);
-                char packetBuffer[MAX_PAYLOAD_SIZE];
-                size_t writeLength = MAX_PAYLOAD_SIZE;
+                char packetBuffer[MAX_PACKET_RECEIVED_SIZE];
+                size_t writeLength = MAX_PACKET_RECEIVED_SIZE;
                 pkt_status_code problem;
 
                 if ((problem = pkt_encode(packetToBeResend, packetBuffer, &writeLength)) != PKT_OK ) {
@@ -57,16 +54,14 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
                     } else {
                         // on set le nouveau temps pour ce timer
                         gettimeofday((windowUtil->timers)[startIndex],NULL);
+                        resendCounter++;
                     }
                 }
             }
 
-            // condition pour finir
-            if ( resendCounter == maxSendCounter ) {
-                shouldStopResend = 1;
-            }
             // on avance au prochain packet
             startIndex++;
+            processed++;
         }
     }
 }
