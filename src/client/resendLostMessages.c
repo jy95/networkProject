@@ -33,7 +33,7 @@ void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * F
                     (end_t.tv_sec - start_t.tv_sec) * 1000 + (end_t.tv_usec - start_t.tv_usec) / 1000;
 
             if ( (diffTime > *timer) && packetToBeResend != NULL ) {
-                fprintf(stderr,"\t Packet N°%d must be resend - DELAY %d\n",pkt_get_seqnum(packetToBeResend),diffTime);
+                fprintf(stderr,"Packet N°%d must be resend - DELAY %d\n",pkt_get_seqnum(packetToBeResend),diffTime);
                 char packetBuffer[MAX_PACKET_RECEIVED_SIZE];
                 size_t writeLength = MAX_PACKET_RECEIVED_SIZE;
                 pkt_status_code problem;

@@ -77,8 +77,6 @@ void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int
                         gettimeofday((windowUtil->timers)[pkt_get_seqnum(packetToSent)],NULL); // set du timer
                         // on a envoyé un message
                         (*sendCounter)++;
-                        // on diminue la taille de la window du receiver: 1 place va être occupé
-                        set_window_server(windowUtil, get_window_server(windowUtil) - 1);
                     }
                 }
             }
