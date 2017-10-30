@@ -17,16 +17,15 @@
 
 const char *real_address(const char *address, struct sockaddr_in6 *rval) {
     // les options pour getaddrinfo
-    struct addrinfo options;
+    struct addrinfo options = {
+            .ai_family = AF_INET6, // IPV6
+            .ai_socktype = SOCK_DGRAM,
+            .ai_flags = AI_PASSIVE,
+            .ai_protocol = IPPROTO_UDP
+    };
     // la struct addrinfo qui va être modifier par getaddrinfo
     struct addrinfo *result;
     int errorCode;
-
-    // settage des paramètres
-    options.ai_family = AF_INET6; // IPV6
-    options.ai_socktype = SOCK_DGRAM; // SOCK_DGRAM ou SOCK_STREAM
-    options.ai_flags = 0;
-    //options.ai_protocol = IPPROTO_UDP;
 
     // on essaye de trouver une adresse
     // service à NULL parce qu'on a pas un numéro de port précis

@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include "../paquet/packet_interface.h"
 #include "../packet_table/packet_table.h"
+#include <sys/time.h> // pour les timers
 
 #define MAX_WINDOW_SIZE 31
 #define MAX_STORED_PACKAGES 256
@@ -19,11 +20,12 @@
 
 
 typedef struct window_util {
-    int lastReceivedSeqNum; //On stocke le dernier numero de sequence valide reçu
+    uint8_t lastReceivedSeqNum; //On stocke le dernier numero de sequence valide reçu
     pkt_t *storedPackets[256]; //On stocke tous les packets reçu
     uint8_t window_server; //On stocke le window du serveur
     uint8_t window; //On stocke le window du client
     unsigned int seqAck[256];
+    struct timeval * timers[256]; // tous les timers
 } window_util_t;
 
 /**
@@ -43,14 +45,14 @@ void del_window_util(window_util_t *windowUtil);
  * @param windowUtil
  * @return lastReceivedSeqNum de windowUtil
  */
-int get_lastReceivedSeqNum(window_util_t *windowUtil);
+uint8_t get_lastReceivedSeqNum(window_util_t *windowUtil);
 
 /**
  *
  * @param windowUtil
  * @return window de windowUtil
  */
-int get_window(window_util_t *windowUtil);
+uint8_t get_window(window_util_t *windowUtil);
 
 /**
  *
@@ -58,7 +60,7 @@ int get_window(window_util_t *windowUtil);
  * @param lastReceivedSeqNum
  * @return SUCCESS : 0 ; ELSE : -1
  */
-int set_lastReceivedSeqNum(window_util_t *windowUtil, int lastReceivedSeqNum);
+void set_lastReceivedSeqNum(window_util_t *windowUtil, uint8_t lastReceivedSeqNum);
 
 /**
  *

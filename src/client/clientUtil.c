@@ -51,7 +51,7 @@ unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count)
     while (counter < count && shouldStop == 0) {
 
         // on a trouvé notre numéro de séquence
-        if ( index == seqnum ) {
+        if ( index == (seqnum -1) ) {
             shouldStop = 1;
             result = 1;
         }

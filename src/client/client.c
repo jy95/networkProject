@@ -53,11 +53,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // Step : Calculer le RTT initial pour envoyer un packet (en théorie, doit être recalculé à chaque réception de (N)ACK)
-    if ((estimateRTTAndWindowSize(socketFileDescriptor, &receiverInfo)) == -1 ) {
-        fprintf(stderr, "Cannot estimate RTT and Window size of receiver\n");
-        return EXIT_FAILURE;
-    }
+    // set de base
+    receiverInfo.RTT = 2 * MAX_LATENCE_TIME; // temps par défaut
+    receiverInfo.windowsReceiver = 1; // on considère la taille de la window par défaut par défaut
 
     fprintf(stderr, "Initial calculated RTT : %d ms \n", receiverInfo.RTT);
     fprintf(stderr, "Initial window size of receiver : %d \n", receiverInfo.windowsReceiver);
@@ -80,13 +78,15 @@ int main(int argc, char *argv[]) {
     uint8_t SeqNumToBeSent = 0; // le numéro de séquence pour envoyer nos packets
     uint8_t FirstSeqNumInWindow = 0; // le premier numéro dans la window
 
+    fprintf(stderr,"Enter your message; CRTL-D for EOF\n");
+
     // nombre de packets envoyés
     int sendCounter = 0;
 
     // tant que transfer pas fini ou une erreur s'est produite
-    while (transferNotFinished && finalExit == EXIT_SUCCESS) {
+    while (transferNotFinished && finalExit == EXIT_SUCCESS && windowUtil != NULL ) {
 
-        struct timeval start_t, end_t;
+        struct timeval end_t;
 
         // la struct pour poll
         struct pollfd ufds[2];
@@ -107,10 +107,6 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Problem with poll\n");
             finalExit = EXIT_FAILURE;
         } else if ( result == 0 ) {
-            // fin du timer
-            // renvoyer les messages dont on n'a pas recu de ACK
-            resendLostMessages(windowUtil,&sendCounter,&FirstSeqNumInWindow,
-                               &socketFileDescriptor,&timer,&finalExit,&start_t);
 
         } else {
             // un ou deux file descriptors sont actifs
@@ -119,7 +115,7 @@ int main(int argc, char *argv[]) {
 
             if ((ufds[0].revents & POLLIN)
                 && isSendingWindowFull(windowUtil, FirstSeqNumInWindow) == 0
-                && get_window_server(windowUtil) != 0 ) {
+                && sendCounter < get_window_server(windowUtil) ) {
 
                 // on envoit un message
                 sendMessage(&sendCounter, &finalExit, &SeqNumToBeSent,
@@ -130,12 +126,17 @@ int main(int argc, char *argv[]) {
             if ( ufds[1].revents & POLLIN ) {
 
                 // on receptionne un ACK ou NACK
-                receiveACKorNACK(&end_t,&start_t,&RTT,&timer,&finalExit,
+                receiveACKorNACK(&end_t,&RTT,&timer,&finalExit,
                                  &socketFileDescriptor,windowUtil,&sendCounter,&FirstSeqNumInWindow);
 
             }
 
         }
+
+        // fin du timer probable : check de timers
+        // renvoyer les messages dont on n'a pas recu de ACK
+        resendLostMessages(windowUtil,&sendCounter,&FirstSeqNumInWindow,
+                           &socketFileDescriptor,&timer,&finalExit);
     }
 
 
@@ -156,11 +157,12 @@ int main(int argc, char *argv[]) {
 
     // on free tout
     free(windowUtil);
+    free(option_arg);
 
     return finalExit;
 }
 
-int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
+int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd){
     // on crée le packet qui va signaler la fin du transfer
     pkt_t *emptyPacket = pkt_new();
 
@@ -176,7 +178,7 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
         return EXIT_FAILURE;
 
     // init du dernier packet
-    pkt_set_seqnum(emptyPacket, SeqNumToBeSent - 1 );
+    pkt_set_seqnum(emptyPacket, SeqNumToBeSent);
     pkt_set_type(emptyPacket, PTYPE_DATA);
     pkt_set_window(emptyPacket, 1); // on ne veut être notifié
     pkt_set_length(emptyPacket, 0); // un packet vide
@@ -237,7 +239,7 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
                 if ( ufds[0].revents & POLLIN ) {
 
                     // lecture du packet
-                    ssize_t byte_count;
+                    int byte_count;
 
                     if ((byte_count = recv(sfd, receivedBuf, length, MSG_DONTWAIT)) < 0 ) {
                         if ( errno != EWOULDBLOCK && errno != EAGAIN ) {
@@ -252,11 +254,12 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
                         } else {
 
                             // si c'est celui qu'on attendait
-                            if ( (pkt_get_seqnum(recu) == pkt_get_seqnum(emptyPacket))
+                            if ( (pkt_get_seqnum(recu) == (SeqNumToBeSent +1))
                                  && (pkt_get_type(recu) == PTYPE_ACK) ){
                                 // on a fini
                                 succes = 1;
                                 hasReceivedResponse = 0;
+                                fprintf(stderr,"The receiver has received the end of transfer packet\n");
                             }
                         }
                     }
@@ -266,8 +269,7 @@ int sendLastPacket(int SeqNumToBeSent,int timer, int sfd){
         }
 
     }
-
-    if (succes) {
+    if (succes != 1) {
         return EXIT_FAILURE;
     } else {
         return EXIT_SUCCESS;

@@ -36,8 +36,7 @@ int main(int argc, char *argv[]) {
     socklen_t fromsize = sizeof rval;
 
     int lengthReceivedPacket = 1;
-    int seqnumPacket = -1;
-    int lastSeqAck = -1;
+    uint8_t seqnumPacket = 255;
     int shouldRead = 1;
 
     window_util_t *windowUtil = new_window_util();
@@ -116,14 +115,14 @@ int main(int argc, char *argv[]) {
 
             lengthReceivedPacket = pkt_get_length(p);
             seqnumPacket = pkt_get_seqnum(p);
-
-            int test1 = (lengthReceivedPacket >= 1 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
+            int receivedInSeq = 0; // par défaut, on considère qu'on pas recu en séquence; 1 sinon
+            int test1 = (lengthReceivedPacket >= 0 && lengthReceivedPacket <= 512);  // 1 =< length <= 512
             int test2 = isInSlidingWindow(windowUtil, pkt_get_seqnum(p)) == 1; //On est dans la sliding window
 
-            fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2);
+            fprintf(stderr,"\t Is valid ? : %d \n", isIgnore == 0 && (test1) && pkt_get_type(p) == PTYPE_DATA && test2);
 
             // Le paquet n'est pas ignore + seqnumPacket != lastSeqAck + 1 <= length <= 512 + paquet = DATA
-            if (isIgnore == 0 && (test1 || seqnumPacket != lastSeqAck) && pkt_get_type(p) == PTYPE_DATA && test2) {
+            if (isIgnore == 0 && test1 && pkt_get_type(p) == PTYPE_DATA && test2) {
                 set_window(windowUtil, pkt_get_window(p)); //On recupere la taille de la window du client
 
                 fprintf(stderr,"\tReceived valid PACKET N° %d\n", (int) pkt_get_seqnum(p));
@@ -142,7 +141,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     pkt_set_type(newPkt, PTYPE_NACK);
-                    pkt_set_tr(newPkt, 1);
+                    pkt_set_tr(newPkt, 0);
                     pkt_set_seqnum(newPkt, pkt_get_seqnum(p));
                     pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
                     pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
@@ -179,18 +178,26 @@ int main(int argc, char *argv[]) {
                         return EXIT_FAILURE;
                     }
 
-                    if ((get_lastReceivedSeqNum(windowUtil) + 1) % MAX_STORED_PACKAGES == seqnumPacket) {
+                    if ((uint8_t) (get_lastReceivedSeqNum(windowUtil) + 1) == seqnumPacket) {
                         fprintf(stderr,"\tDistribution of packets payload to stdout\n");
-                        set_lastReceivedSeqNum(windowUtil, seqnumPacket); //On incremente le numero de sequence valide
                         printer(windowUtil, p); // Permet d'afficher sur stdout tous les paquets avec les numeros de sequence valide
+                        receivedInSeq = 1; // on sait qu'ici on a recu tout dans l'ordre
                     } else {
-                        fprintf(stderr,"\tStored this packed for later\n");
-                        add_window_packet(windowUtil, p); //On stocke le paquet au frais
+                        fprintf(stderr,"\tStored this packed for later...\n");
+                        int response = set_seqnum_window(windowUtil, p); //On stocke le paquet au frais
+
+                        if(response == 1) {
+                            fprintf(stderr,"\tthe packet is successfully stored\n");
+                        } else if(response == 2) {
+                            fprintf(stderr,"\tthe packet not stored because the window is full or we are not in the sliding window\n");
+                        } else {
+                            fprintf(stderr,"\tthe packet was already stored\n");
+                        }
                     }
 
                     pkt_set_type(newPkt, PTYPE_ACK);
                     pkt_set_tr(newPkt, 0);
-                    pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) % MAX_STORED_PACKAGES));
+                    pkt_set_seqnum(newPkt, (const uint8_t) (get_lastReceivedSeqNum(windowUtil) + 1));
                     pkt_set_window(newPkt, (const uint8_t) get_window_server(windowUtil));
                     pkt_set_timestamp(newPkt, (const uint32_t) time(NULL));
 
@@ -217,12 +224,11 @@ int main(int argc, char *argv[]) {
                 }
 
                 // On a fini le transfer
-                if(seqnumPacket == lastSeqAck && lengthReceivedPacket == 0) {
+                if(receivedInSeq == 1 && lengthReceivedPacket == 0) {
                     fprintf(stderr,"End of transfer\n");
                     shouldRead = 0;
                 }
 
-                lastSeqAck = seqnumPacket;
 
             }
 
@@ -234,6 +240,9 @@ int main(int argc, char *argv[]) {
 
     del_window_util(windowUtil);
 
+
     if (fp != NULL) fclose(fp);
+    fprintf(stderr, "Server done\n"); //Erreur lors de l'envoi des donnees
+
     return EXIT_SUCCESS;
 }

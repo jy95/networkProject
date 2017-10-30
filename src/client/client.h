@@ -22,7 +22,7 @@
 
 #define MAX_LATENCE_TIME    2000 // le temps maximal
 #define MAX_PAYLOAD_SIZE    512  // la taille MAX du payload
-#define MAX_PACKET_RECEIVED_SIZE 530// la taille max
+#define MAX_PACKET_RECEIVED_SIZE 528// la taille max
 #define DEFAULT_CLIENT_WINDOW_SIZE  5 // une taille de window par défaut
 
 // structure pour le calcul de RTT
@@ -64,13 +64,13 @@ unsigned int isInSlidingWindowOfClient(uint8_t seqnum, uint8_t start, int count)
 
 // resend de packets non correctement recus
 void resendLostMessages(window_util_t *windowUtil, int * sendCounter,uint8_t * FirstSeqNumInWindow,
-                        int * socketFileDescriptor,int * timer,int *finalExit,struct timeval * start_t );
+                        int * socketFileDescriptor,int * timer,int *finalExit);
 
 // reception des messages
-void receiveACKorNACK(struct timeval * end_t, struct timeval * start_t ,
+void receiveACKorNACK(struct timeval * end_t,
                       int * RTT, int * timer,  int * finalExit ,
                       int * socketFileDescriptor, window_util_t *windowUtil ,
                       int * sendCounter, uint8_t * FirstSeqNumInWindow );
 
 // envoi du dernier packet
-int sendLastPacket(int SeqNumToBeSent,int timer, int sfd);
+int sendLastPacket(uint8_t SeqNumToBeSent,int timer, int sfd);

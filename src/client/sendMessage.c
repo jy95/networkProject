@@ -7,7 +7,7 @@
 void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int * transferNotFinished, int * socketFileDescriptor,window_util_t *windowUtil){
     // on lit et on stocke
     char receivedBuffer[MAX_PAYLOAD_SIZE];
-    ssize_t readCount;
+    int readCount;
     if ((readCount = read(STDIN_FILENO, receivedBuffer, MAX_PAYLOAD_SIZE)) <= 0 ) {
 
         if ( readCount == 0 ) {
@@ -50,7 +50,7 @@ void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int
             char packetBuffer[MAX_PACKET_RECEIVED_SIZE];
             pkt_status_code problem;
             size_t writeLength = MAX_PACKET_RECEIVED_SIZE;
-            if ((problem = pkt_encode(packetToSent, receivedBuffer, &writeLength)) != PKT_OK ) {
+            if ((problem = pkt_encode(packetToSent, packetBuffer, &writeLength)) != PKT_OK ) {
                 fprintf(stderr, "\t Cannot encode packet : ignored - err code : %d \n", problem);
                 *finalExit = EXIT_FAILURE;
             } else {
@@ -67,10 +67,17 @@ void sendMessage(int * sendCounter,int * finalExit, uint8_t * SeqNumToBeSent,int
                     }
                 } else {
                     fprintf(stderr, "\t Packet correctly sent \n");
-                    // on a envoyé un message
-                    (*sendCounter)++;
-                    // on diminue la taille de la window du receiver: 1 place va être occupé
-                    set_window_server(windowUtil, get_window_server(windowUtil) - 1);
+                    // on set le timer , en allouant  dynamiquement l'élément
+
+                    if ( ((windowUtil->timers)[pkt_get_seqnum(packetToSent)]
+                                  = malloc(sizeof(struct timeval))) == NULL ){
+                        fprintf(stderr, "\t Cannot allocate timer : %s\n", strerror(errno));
+                        *finalExit = EXIT_FAILURE;
+                    } else {
+                        gettimeofday((windowUtil->timers)[pkt_get_seqnum(packetToSent)],NULL); // set du timer
+                        // on a envoyé un message
+                        (*sendCounter)++;
+                    }
                 }
             }
         }

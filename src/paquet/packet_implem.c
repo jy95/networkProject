@@ -262,7 +262,7 @@ uint32_t pkt_get_crc2(const pkt_t *p) {
 
 
 pkt_status_code pkt_set_type(pkt_t *p, const ptypes_t type) {
-    if (type != 1 && type != 2 && type != 3) return E_TYPE;
+    if (type != PTYPE_DATA && type != PTYPE_ACK && type != PTYPE_NACK) return E_TYPE;
 
     (p->structheader).bitFields.type = type;
 
