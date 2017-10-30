@@ -59,7 +59,7 @@ int set_window(window_util_t *windowUtil, uint8_t window) {
 
 int get_first_value_window(window_util_t* windowUtil) {
     if(get_window(windowUtil) == 0) return 0;
-    return (windowUtil->seqAck)[get_lastReceivedSeqNum(windowUtil) + 1];
+    return (windowUtil->seqAck)[get_lastReceivedSeqNum(windowUtil)];
 }
 
 int add_window_packet(window_util_t *windowUtil, pkt_t *p) {
@@ -148,11 +148,9 @@ void printer(window_util_t *windowUtil, pkt_t *first_pkt) {
 
         seqnum++;
 
-        pkt_t * p;
         // Tant qu'on est dans la window et que le premier numero de sequence est deja sotcke
         while (isInSlidingWindow(windowUtil, seqnum) && get_first_value_window(windowUtil) == 1) {
-
-            p = removeElem(windowUtil->storedPackets, seqnum); // On retire l'element de la liste des paquets
+            pkt_t * p = removeElem(windowUtil->storedPackets, seqnum); // On retire l'element de la liste des paquets
             if(pkt_get_length(p) > 0) {
                 fwrite(pkt_get_payload(p), pkt_get_length(p), 1, stdout); // on print le payload du paquet
             }
